@@ -71,6 +71,20 @@
     </div>
   </section>
 
+  <section id="view-wissen" class="view">
+    <div id="wq-main">
+      <h2>Wissen</h2>
+      <p class="note">Frag etwas zu Schach. Die Antwort kommt nur aus freien Schachbüchern (gemeinfreie Klassiker, Wikibooks), mit Quellenangabe und wörtlichem Zitat. Die Zitate werden automatisch gegen den Originaltext geprüft.</p>
+      <div class="wq-row"><input id="wq" type="text" placeholder="z. B. Warum soll ich das Zentrum kontrollieren?"><button class="btn primary" id="wq-go">Fragen</button></div>
+      <div id="wq-status" class="note"></div>
+      <div id="wq-answer" class="wq-answer"></div>
+      <div id="wq-passages"></div>
+      <h3>Quellen zum Selberlesen</h3>
+      <div id="wq-sources"></div>
+    </div>
+    <div id="wq-reader" hidden></div>
+  </section>
+
   <section id="view-settings" class="view">
     <div id="look-box"></div>
     <h2>Einstellungen</h2>
@@ -93,6 +107,7 @@
     <button data-view="play" class="active"><span>♞</span>Spielen</button>
     <button data-view="train"><span>◎</span>Aufgaben</button>
     <button data-view="review"><span>☰</span>Analyse</button>
+    <button data-view="wissen"><span>📖</span>Wissen</button>
     <button data-view="settings"><span>⚙</span>Mehr</button>
   </nav>
 </div>
