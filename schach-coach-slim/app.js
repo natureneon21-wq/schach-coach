@@ -49,6 +49,13 @@ function updateRating(result, oppElo, takebacks) {
   store.set('rating', R);
   return { r: R.r, d: R.r - before, n: R.n };
 }
+const helpUsed = () => !!G && (G.helps > 0 || G.takebacks > 0);
+const HELP_NOTE = 'Hinweis: Mit Hilfe zählt diese Partie nicht für deine Elo.';
+function markHelp() { const first = !helpUsed(); G.helps++; return first && !G.practice ? '\n' + HELP_NOTE : ''; }
+function rateText(result) {
+  if (helpUsed()) return 'Nicht gewertet: Du hast Hilfe genutzt (Tipp, besten Zug gezeigt, Zug zurückgenommen oder Gemini). Deine Elo bleibt gleich.';
+  return ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks));
+}
 function ratingLine(u) { return `Deine geschätzte Elo: ${u.r} (${u.d >= 0 ? '+' : ''}${u.d})${u.n < 10 ? ' – noch vorläufig' : ''}.`; }
 function renderRating() {
   const el = $('#rating-box');
@@ -203,7 +210,7 @@ function flagFall(col) {
   const result = mine ? 'loss' : 'win';
   G.result = result;
   let text = mine ? 'Deine Zeit ist abgelaufen. Das passiert – beim nächsten Mal früher entscheiden und nicht jeden Zug neu durchrechnen.' : 'Der Gegner hat keine Zeit mehr. Du gewinnst auf Zeit!';
-  if (!G.rated) { G.rated = true; text += '\n' + ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks)); }
+  if (!G.rated) { G.rated = true; text += '\n' + rateText(result); }
   coach.say(text, mine ? 'think' : 'happy', [
     { label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) },
     { label: 'Neue Partie', onClick: openNewDialog },
@@ -214,7 +221,7 @@ if (!clockTimer) clockTimer = setInterval(clockTick, 200);
 
 function newGame({ color, level, fen }) {
   const chess = new Chess(fen || undefined);
-  G = { chess, userColor: color, level, moves: [], over: false, busy: false, hintStep: 0, hint: null, prev: null, takebacks: 0, id: Date.now() };
+  G = { chess, userColor: color, level, moves: [], over: false, busy: false, hintStep: 0, hint: null, prev: null, takebacks: 0, helps: 0, id: Date.now() };
   if (!fen && settings.tcM > 0) G.clock = { w: settings.tcM * 60000, b: settings.tcM * 60000, inc: settings.tcInc * 1000, run: null, t0: 0 };
 }
 
@@ -346,15 +353,16 @@ function askAfterMistake(rec, fb) {
   G.awaiting = true; renderPlay();
   const cont = () => { G.awaiting = false; G.hint = null; coach.clearActions(); botTurn(); };
   const takeBack = () => {
-    G.chess.undo(); G.moves.pop(); G.takebacks++; G.busy = false; G.awaiting = false; G.hint = null;
+    const note = helpUsed() || G.practice ? '' : '\n' + HELP_NOTE; G.chess.undo(); G.moves.pop(); G.takebacks++; G.busy = false; G.awaiting = false; G.hint = null;
     clockStart(G.userColor);
     renderPlay();
-    coach.say('Gut, neuer Versuch. Nimm dir die Frage zu Herzen und prüfe alle Kandidatenzüge.', 'happy');
+    coach.say('Gut, neuer Versuch. Nimm dir die Frage zu Herzen und prüfe alle Kandidatenzüge.' + note, 'happy');
   };
   const showBetter = () => {
     const { from, to } = uciParts(fb.bestUci);
     G.hint = { arrow: { from, to } }; renderPlay();
-    coach.say(`Besser wäre ${uciToSan(rec.fenBefore, fb.bestUci)} gewesen. Überlege, warum.`, 'think', [
+    const note = markHelp();
+    coach.say(`Besser wäre ${uciToSan(rec.fenBefore, fb.bestUci)} gewesen. Überlege, warum.${note}`, 'think', [
       { label: 'Zug zurücknehmen', primary: true, onClick: takeBack }, { label: 'Weiterspielen', onClick: cont },
     ]);
   };
@@ -364,7 +372,7 @@ function askAfterMistake(rec, fb) {
       { label: 'Besseren Zug zeigen', onClick: showBetter },
       { label: 'Weiterspielen', onClick: cont },
     ];
-    if (settings.apiKey) actions.splice(2, 0, { label: 'Gemini: Tiefenanalyse', onClick: () => askWithCancel(coach, moveExplainPrompt(geminiData(rec, fb)), actions) });
+    if (settings.apiKey) actions.splice(2, 0, { label: 'Gemini: Tiefenanalyse', onClick: () => { markHelp(); askWithCancel(coach, moveExplainPrompt(geminiData(rec, fb)), actions); } });
     coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, actions);
   };
   if (!settings.retryOffer && !G.practice) {
@@ -417,7 +425,7 @@ async function finishIfOver() {
     text = (c.isStalemate() ? 'Patt. ' : '') + TN().end.draw;
   }
   G.result = result;
-  if (!G.rated) { G.rated = true; text += '\n' + ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks)); }
+  if (!G.rated) { G.rated = true; text += '\n' + rateText(result); }
   coach.say(text, mood, endButtons(), eff);
   renderPlay();
   saveGame();
@@ -441,8 +449,9 @@ $('#btn-hint').onclick = async () => {
   const res = G.prev ? await G.prev : null;
   const h = hintFor(G.chess, res && res.lines[0] ? res.lines[0].pv[0] : null, Math.min(G.hintStep, 3));
   G.hintStep++;
+  const note = markHelp();
   G.hint = { highlight: h.highlight, arrow: h.arrow };
-  coach.say(h.text, 'think');
+  coach.say(h.text + note, 'think');
   renderPlay();
 };
 $('#btn-check').onclick = () => $('#dlg-check').showModal();
@@ -450,7 +459,7 @@ $('#check-close').onclick = () => $('#dlg-check').close();
 $('#btn-resign').onclick = () => {
   if (!G || G.over) return;
   coach.say('Willst du wirklich aufgeben?', 'think', [
-    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; const u = G.rated ? null : updateRating('loss', LEVELS[G.level].num, G.takebacks); G.rated = true; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?' + (u ? '\n' + ratingLine(u) : ''), 'neutral', endButtons()); } },
+    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; const u = G.rated ? null : rateText('loss'); G.rated = true; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?' + (u ? '\n' + u : ''), 'neutral', endButtons()); } },
     { label: 'Weiterspielen', onClick: () => coach.say('Gut, weiter geht es!', 'happy') },
   ]);
 };
