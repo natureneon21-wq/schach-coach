@@ -20,7 +20,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('schach.' + k, JSON.stringify(v)); } catch { /* voll */ } },
 };
 const settings = Object.assign(
-  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', tone: 'freundlich', coachMode: 'live', ...LOOK_DEFAULTS },
+  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', tone: 'freundlich', coachMode: 'live', tcM: 0, tcInc: 0, ...LOOK_DEFAULTS },
   store.get('settings', {}),
 );
 if (settings.model === 'gemini-3.8-flash') settings.model = 'gemini-flash-latest'; // wurde von der API abgelehnt
@@ -153,9 +153,69 @@ function cleanAI(t) { return t.replace(/\*+/g, '').replace(/^#+\s*/gm, ''); }
    ===================================================================== */
 let G = null;
 
+/* ---------- Schachuhr ---------- */
+const TC_PRESETS = [[0, 0, 'Unbegrenzt'], [3, 2, 'Blitz 3+2'], [5, 3, 'Blitz 5+3'], [10, 0, 'Schnell 10+0'], [15, 10, 'Schnell 15+10'], [30, 0, 'Lang 30+0']];
+let clockTimer = null;
+function fmtClock(ms) {
+  ms = Math.max(0, ms);
+  const s = ms / 1000;
+  if (s < 10) return s.toFixed(1);
+  const t = Math.ceil(s), m = Math.floor(t / 60);
+  return m + ':' + String(t % 60).padStart(2, '0');
+}
+function clockOn() { return !!(G && G.clock); }
+function clockLeft(col) {
+  const k = G.clock;
+  return k[col] - (!G.over && k.run === col ? Date.now() - k.t0 : 0);
+}
+function renderClock() {
+  const box = $('#clocks');
+  if (!clockOn()) { box.hidden = true; document.body.classList.remove('has-clock'); return; }
+  box.hidden = false; document.body.classList.add('has-clock');
+  const me = G.userColor, op = me === 'w' ? 'b' : 'w';
+  for (const [id, col] of [['#clk-op', op], ['#clk-me', me]]) {
+    const el = $(id), ms = clockLeft(col);
+    el.querySelector('b').textContent = fmtClock(ms);
+    el.classList.toggle('run', !G.over && G.clock.run === col);
+    el.classList.toggle('low', ms < 20000);
+  }
+}
+function clockStart(color) { if (clockOn()) { G.clock.run = color; G.clock.t0 = Date.now(); } }
+// Zug von `col` ist gespielt: Zeit abziehen, Inkrement geben, Gegner starten. minUsed = simulierte Mindest-Bedenkzeit (Bot)
+function clockMove(col, minUsed = 0) {
+  if (!clockOn() || G.over) return;
+  const k = G.clock;
+  const used = Math.max(Date.now() - k.t0, minUsed);
+  k[col] = Math.max(0, k[col] - used) + k.inc;
+  k.run = col === 'w' ? 'b' : 'w'; k.t0 = Date.now();
+  renderClock();
+}
+function clockTick() {
+  if (!G || !G.clock || G.over) return renderClock();
+  renderClock();
+  const col = G.clock.run;
+  if (clockLeft(col) <= 0) flagFall(col);
+}
+function flagFall(col) {
+  if (G.over) return;
+  G.over = true; G.busy = false; G.clock[col] = 0; G.hint = null;
+  const mine = col === G.userColor;
+  const result = mine ? 'loss' : 'win';
+  G.result = result;
+  let text = mine ? 'Deine Zeit ist abgelaufen. Das passiert – beim nächsten Mal früher entscheiden und nicht jeden Zug neu durchrechnen.' : 'Der Gegner hat keine Zeit mehr. Du gewinnst auf Zeit!';
+  if (!G.rated) { G.rated = true; text += '\n' + ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks)); }
+  coach.say(text, mine ? 'think' : 'happy', [
+    { label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) },
+    { label: 'Neue Partie', onClick: openNewDialog },
+  ], mine ? null : 'bounce');
+  renderPlay(); saveGame(); renderClock();
+}
+if (!clockTimer) clockTimer = setInterval(clockTick, 200);
+
 function newGame({ color, level }) {
   const chess = new Chess();
   G = { chess, userColor: color, level, moves: [], over: false, busy: false, hintStep: 0, hint: null, prev: null, takebacks: 0, id: Date.now() };
+  if (settings.tcM > 0) G.clock = { w: settings.tcM * 60000, b: settings.tcM * 60000, inc: settings.tcInc * 1000, run: null, t0: 0 };
 }
 
 function renderPlay() {
@@ -173,6 +233,7 @@ function renderPlay() {
   else s = `<b>Du bist am Zug</b> (${whoName(G.userColor)})`;
   if (!G.over && G.chess.inCheck()) s += ' – <b>Schach!</b>';
   $('#status').innerHTML = s;
+  renderClock();
   // Zugleiste
   let h = '';
   G.moves.forEach((m, i) => {
@@ -197,6 +258,7 @@ async function startGame(opts) {
   coach.say(TN().start(settings.coachName, `${lv.name} (${lv.elo} Elo)`, whoName(color)), 'happy', [], 'nod');
   if (!engineOK) coach.say('Die Engine konnte nicht geladen werden. Du kannst spielen, aber ohne Zugbewertung.', 'worry');
   renderPlay();
+  clockStart('w');
   if (color === 'b') await botTurn(); else { prefetch(); renderPlay(); }
 }
 
@@ -220,12 +282,17 @@ async function botChoose() {
 
 async function botTurn() {
   if (G.over) return;
-  G.busy = true; renderPlay();
+  G.busy = true;
+  if (G.clock && G.clock.run !== (G.userColor === 'w' ? 'b' : 'w')) clockStart(G.userColor === 'w' ? 'b' : 'w');
+  else if (G.clock) G.clock.t0 = Date.now();
+  renderPlay();
   const t0 = Date.now();
   const pickMove = await botChoose();
   await sleep(Math.max(0, 600 - (Date.now() - t0)));
+  if (G.over) return;
   const mv = G.chess.move({ from: pickMove.from, to: pickMove.to, promotion: pickMove.promotion });
   G.moves.push(recFrom(mv));
+  if (G.clock) clockMove(G.userColor === 'w' ? 'b' : 'w', (800 + Math.random() * 1800) * Math.min(3, Math.max(1, G.clock.w / 180000)));
   if (await finishIfOver()) return;
   prefetch();
   G.busy = false; renderPlay();
@@ -244,12 +311,15 @@ async function onUserMove(from, to, promotion) {
   const mv = G.chess.move({ from, to, promotion });
   const rec = recFrom(mv);
   G.moves.push(rec);
+  clockMove(G.userColor);
+  if (G.clock) G.clock.run = null; // Bot-Uhr startet erst, wenn der Bot wirklich dran ist
   renderPlay();
   if (G.chess.isGameOver()) { rec.cls = 'best'; await finishIfOver(); return; }
   if (settings.coachMode === 'spaeter') { await botTurn(); return; } // stiller Modus: erst nach der Partie analysieren
   if (settings.coachMode !== 'fehler') coach.say('Mal sehen …', 'think');
   const prevRes = prevPromise ? await prevPromise : null;
   const fb = await evaluateMove(prevRes, rec);
+  if (G.over) return;
   if (!fb) { await botTurn(); return; }
   rec.cls = fb.cls.id; rec.loss = fb.loss;
   G.pending = { rec, fb };
@@ -276,6 +346,7 @@ function askAfterMistake(rec, fb) {
   const cont = () => { G.awaiting = false; G.hint = null; coach.clearActions(); botTurn(); };
   const takeBack = () => {
     G.chess.undo(); G.moves.pop(); G.takebacks++; G.busy = false; G.awaiting = false; G.hint = null;
+    clockStart(G.userColor);
     renderPlay();
     coach.say('Gut, neuer Versuch. Nimm dir die Frage zu Herzen und prüfe alle Kandidatenzüge.', 'happy');
   };
@@ -378,6 +449,13 @@ function openNewDialog() {
     $('#elo-name').textContent = lv.name + (lv.num >= 2800 ? ' · zum Vergleich: Magnus Carlsen ca. 2823 (FIDE, Nov. 2026)' : '');
   };
   range.oninput = upd; upd();
+  const stc = $('#seg-tc'), cm = $('#tc-m'), ci = $('#tc-inc');
+  stc.innerHTML = TC_PRESETS.map(([m, i, n]) => `<button data-m="${m}" data-i="${i}">${n}</button>`).join('');
+  const markTc = () => stc.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.m === settings.tcM && +b.dataset.i === settings.tcInc));
+  cm.value = settings.tcM; ci.value = settings.tcInc; markTc();
+  stc.querySelectorAll('button').forEach((b) => { b.onclick = () => { settings.tcM = +b.dataset.m; settings.tcInc = +b.dataset.i; cm.value = settings.tcM; ci.value = settings.tcInc; markTc(); }; });
+  const custom = () => { settings.tcM = Math.max(0, Math.min(180, Math.round(+cm.value || 0))); settings.tcInc = Math.max(0, Math.min(60, Math.round(+ci.value || 0))); markTc(); };
+  cm.oninput = custom; ci.oninput = custom;
   const sc = $('#seg-color');
   sc.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === settings.color); b.onclick = () => { settings.color = b.dataset.v; sc.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; });
   switchView('play');
