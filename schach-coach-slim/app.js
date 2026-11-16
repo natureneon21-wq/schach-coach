@@ -10,6 +10,7 @@ import {
 } from './analysis.js';
 import { askGemini, moveExplainPrompt, gameSummaryPrompt } from './gemini.js';
 import { initWissen } from './wissen.js';
+import { TONES, tone } from './persona.js';
 
 /* ---------- Hilfsfunktionen & Speicher ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -19,11 +20,45 @@ const store = {
   set(k, v) { try { localStorage.setItem('schach.' + k, JSON.stringify(v)); } catch { /* voll */ } },
 };
 const settings = Object.assign(
-  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', ...LOOK_DEFAULTS },
+  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', tone: 'freundlich', ...LOOK_DEFAULTS },
   store.get('settings', {}),
 );
 if (settings.model === 'gemini-3.8-flash') settings.model = 'gemini-flash-latest'; // wurde von der API abgelehnt
 const saveSettings = () => store.set('settings', settings);
+
+/* ---------- Tonalität des Coachs ---------- */
+const TN = () => tone(settings.tone);
+const praise = (id) => TN().praise?.[id] || PRAISE[id];
+const badOpen = (id) => TN().bad?.[id] || '';
+
+/* ---------- Eigene Elo-Schätzung (aus den Ergebnissen gegen die Bots) ----------
+   Elo-Formel mit Startwert 300. Die ersten 10 Partien zählen stärker. Partien mit Zugrücknahmen zählen halb.
+   Die Bot-Zahlen sind eine grobe Stockfish-Skala, deshalb ist das eine Schätzung und keine offizielle Wertung. */
+const RATING_START = 300;
+const getRating = () => store.get('rating', { r: RATING_START, n: 0, hist: [] });
+function updateRating(result, oppElo, takebacks) {
+  const R = getRating();
+  const S = result === 'win' ? 1 : result === 'draw' ? 0.5 : 0;
+  const E = 1 / (1 + Math.pow(10, (oppElo - R.r) / 400));
+  let K = R.n < 10 ? 40 : 24;
+  if (takebacks > 0) K *= 0.5;
+  const before = R.r;
+  R.r = Math.max(100, Math.min(3200, Math.round(R.r + K * (S - E))));
+  R.n++;
+  R.hist = [...R.hist, { t: Date.now(), r: R.r, opp: oppElo, res: result }].slice(-60);
+  store.set('rating', R);
+  return { r: R.r, d: R.r - before, n: R.n };
+}
+function ratingLine(u) { return `Deine geschätzte Elo: ${u.r} (${u.d >= 0 ? '+' : ''}${u.d})${u.n < 10 ? ' – noch vorläufig' : ''}.`; }
+function renderRating() {
+  const el = $('#rating-box');
+  if (!el) return;
+  const R = getRating();
+  if (!R.n) { el.innerHTML = '<b>Deine geschätzte Elo: ca. ' + RATING_START + '</b><small>Startwert. Nach deiner ersten Partie beginnt die Schätzung.</small>'; return; }
+  const pts = R.hist.map((h) => h.r), lo = Math.min(...pts) - 10, hi = Math.max(...pts) + 10;
+  const line = pts.length > 1 ? `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts.map((v, i) => `${(i / (pts.length - 1)) * 200},${40 - ((v - lo) / (hi - lo)) * 36 - 2}`).join(' ')}"/></svg>` : '';
+  el.innerHTML = `<b>Deine geschätzte Elo: ${R.r}</b><small>${R.n} Partien${R.n < 10 ? ' · noch vorläufig, wird mit jeder Partie genauer' : ''}. Schätzung aus den Ergebnissen gegen die Bots, nicht mit Online-Elo vergleichbar.</small>${line}`;
+}
 
 /* ---------- Bot-Stufen: 200 bis 3000 Elo in 50er-Schritten ----------
    Unter ~1350 Elo: Stockfish mit Tiefenlimit + zufälliger Auswahl unter den besten Zügen (Softmax).
@@ -61,7 +96,7 @@ async function ana(fen, opts) {
 function switchView(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
-  if (name === 'review') renderHistory();
+  if (name === 'review') { renderHistory(); renderRating(); }
   if (name === 'train') enterTrain();
 }
 document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
@@ -159,7 +194,7 @@ async function startGame(opts) {
   const color = opts.color === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : opts.color;
   newGame({ color, level: opts.level });
   const lv = LEVELS[opts.level];
-  coach.say(`Los geht's gegen den ${lv.name} (${lv.elo} Elo)! Du spielst ${whoName(color)}. Denk bei jedem Zug an die Denk-Routine – ich schaue dir über die Schulter.`, 'happy', [], 'nod');
+  coach.say(TN().start(settings.coachName, `${lv.name} (${lv.elo} Elo)`, whoName(color)), 'happy', [], 'nod');
   if (!engineOK) coach.say('Die Engine konnte nicht geladen werden. Du kannst spielen, aber ohne Zugbewertung.', 'worry');
   renderPlay();
   if (color === 'b') await botTurn(); else { prefetch(); renderPlay(); }
@@ -220,11 +255,11 @@ async function onUserMove(from, to, promotion) {
   const [mood, eff] = MOOD_FOR[fb.cls.id];
   const id = fb.cls.id;
   if (id === 'best' || id === 'good') {
-    coach.say(pick(PRAISE[id]), mood, [], eff);
+    coach.say(pick(praise(id)), mood, [], eff);
     await sleep(900); await botTurn();
   } else if (id === 'inacc') {
     const ex = explainMove({ fenBefore: rec.fenBefore, played: rec.uci, bestUci: fb.bestUci, replyUci: fb.reply, cls: fb.cls });
-    coach.say(`${pick(PRAISE.inacc)}\n${ex.text}`, mood, [], eff);
+    coach.say(`${pick(praise('inacc'))}\n${ex.text}`, mood, [], eff);
     await sleep(900); await botTurn();
   } else {
     askAfterMistake(rec, fb);
@@ -259,14 +294,14 @@ function askAfterMistake(rec, fb) {
       try { coach.say(cleanAI(await askGemini(settings, moveExplainPrompt(geminiData(rec, fb)))), 'happy', actions); }
       catch (e) { coach.say('Gemini-Fehler: ' + e.message, 'worry', actions); }
     } });
-    coach.say(`${fb.cls.label}. ${ex.text}`, mood, actions);
+    coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, actions);
   };
   if (!settings.retryOffer) {
-    coach.say(`${fb.cls.label}. ${ex.text}`, mood, [], eff);
+    coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, [], eff);
     sleep(1200).then(cont);
     return;
   }
-  coach.say(`${fb.cls.label} (${fb.cls.sym}). ${ex.question}`, mood, [
+  coach.say(`${fb.cls.label} (${fb.cls.sym}). ${badOpen(fb.cls.id)}${ex.question}`, mood, [
     { label: 'Zug zurücknehmen', primary: true, onClick: takeBack },
     { label: 'Erklär mir warum', onClick: explain },
     { label: 'Weiterspielen', onClick: cont },
@@ -280,13 +315,14 @@ async function finishIfOver() {
   let result, text, mood = 'neutral', eff = null;
   if (c.isCheckmate()) {
     const winner = c.turn() === 'w' ? 'b' : 'w';
-    if (winner === G.userColor) { result = 'win'; text = 'Schachmatt – du hast gewonnen! Glückwunsch, das war stark.'; mood = 'happy'; eff = 'bounce'; }
-    else { result = 'loss'; text = 'Schachmatt. Das passiert – wichtig ist, was wir daraus lernen. Lass uns die Partie anschauen.'; mood = 'think'; }
+    if (winner === G.userColor) { result = 'win'; text = TN().end.win; mood = 'happy'; eff = 'bounce'; }
+    else { result = 'loss'; text = TN().end.loss; mood = 'think'; }
   } else {
     result = 'draw';
-    text = c.isStalemate() ? 'Patt – unentschieden.' : 'Remis.';
+    text = (c.isStalemate() ? 'Patt. ' : '') + TN().end.draw;
   }
   G.result = result;
+  if (!G.rated) { G.rated = true; text += '\n' + ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks)); }
   coach.say(text, mood, [
     { label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) },
     { label: 'Neue Partie', onClick: openNewDialog },
@@ -321,7 +357,7 @@ $('#check-close').onclick = () => $('#dlg-check').close();
 $('#btn-resign').onclick = () => {
   if (!G || G.over) return;
   coach.say('Willst du wirklich aufgeben?', 'think', [
-    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?', 'neutral', [{ label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) }, { label: 'Neue Partie', onClick: openNewDialog }]); } },
+    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; const u = G.rated ? null : updateRating('loss', LEVELS[G.level].num, G.takebacks); G.rated = true; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?' + (u ? '\n' + ratingLine(u) : ''), 'neutral', [{ label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) }, { label: 'Neue Partie', onClick: openNewDialog }]); } },
     { label: 'Weiterspielen', onClick: () => coach.say('Gut, weiter geht es!', 'happy') },
   ]);
 };
@@ -331,6 +367,7 @@ const dlgNew = $('#dlg-new');
 function openNewDialog() {
   const range = $('#elo-range');
   range.value = levelInfo(settings.level).num;
+  { const R = getRating(); $('#elo-mine').textContent = `Deine geschätzte Elo: ca. ${R.r}${R.n < 10 ? ' (vorläufig)' : ''}. Ein Gegner nahe an deinem Wert ist meist am lehrreichsten.`; }
   const upd = () => {
     const lv = levelInfo(+range.value);
     settings.level = lv.num;
@@ -570,7 +607,7 @@ async function onTrainMove(from, to, promotion) {
     T.done = true;
     const list = store.get('mistakes', []).filter((t) => t.fen !== T.item.fen);
     store.set('mistakes', list);
-    coachTrain.say(`${pick(PRAISE[fb.cls.id === 'best' ? 'best' : 'good'])} Aufgabe gelöst (${list.length} übrig).`, 'happy', [{ label: 'Nächste Aufgabe', primary: true, onClick: () => startTask() }], 'bounce');
+    coachTrain.say(`${pick(praise(fb.cls.id === 'best' ? 'best' : 'good'))} Aufgabe gelöst (${list.length} übrig).`, 'happy', [{ label: 'Nächste Aufgabe', primary: true, onClick: () => startTask() }], 'bounce');
     T.busy = false;
     return;
   }
@@ -605,6 +642,11 @@ initLookSettings($('#look-box'), settings, saveSettings, (k) => {
   }
   [board, boardTrain, boardReview].forEach((b) => b.render());
 });
+const toneSel = $('#set-tone');
+toneSel.innerHTML = Object.entries(TONES).map(([k, t]) => `<option value="${k}">${t.name} – ${t.desc}</option>`).join('');
+toneSel.value = TONES[settings.tone] ? settings.tone : 'freundlich';
+toneSel.onchange = () => { settings.tone = toneSel.value; saveSettings(); coach.say(TN().sample, 'happy', [], 'nod'); };
+$('#set-rating-reset').onclick = () => { store.set('rating', { r: RATING_START, n: 0, hist: [] }); renderRating(); $('#set-msg').textContent = 'Elo-Schätzung zurückgesetzt.'; };
 $('#set-key').value = settings.apiKey;
 $('#set-model').value = settings.model;
 $('#set-legal').checked = settings.showLegal;
