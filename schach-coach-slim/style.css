@@ -252,3 +252,7 @@ body[data-ctl=drawer] .ctl-tab { display: flex; align-items: center; justify-con
 .pcs.set-alien svg ellipse, .pcs.set-cyber svg ellipse { fill: none; }
 .pcs.set-cyber svg ellipse.d { stroke: var(--pf); stroke-width: 1.1; }
 .pcs.set-cyber svg .to { stroke: var(--pf) !important; }
+/* Bild-im-Bild: Dialoge nur im freien Bereich, nicht unter dem Video */
+body[data-layout=pip] dialog { max-height: calc(100dvh - var(--pip-h) - 16px); overflow-y: auto; margin-left: auto; margin-right: auto; }
+body[data-layout=pip][data-pip-pos=top] dialog { margin-top: calc(var(--pip-h) + 8px); margin-bottom: auto; }
+body[data-layout=pip][data-pip-pos=bottom] dialog { margin-top: 8px; margin-bottom: auto; }
