@@ -27,7 +27,7 @@ const wrap = (bg, inner) => `<svg viewBox="0 0 120 120" class="mira" data-mood="
 
 export const AVATARS = [
   {
-    id: 'mira', name: 'Mira',
+    id: 'mira', name: 'Mira', who: 'Mira',
     svg: () => wrap('#34305a', `
   <g class="body">
     <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#8a5cf0"/>
@@ -45,7 +45,7 @@ export const AVATARS = [
   </g>`),
   },
   {
-    id: 'mira-brille', name: 'Mira (Brille)',
+    id: 'mira-brille', name: 'Mira (Brille)', who: 'Mira',
     svg: () => wrap('#27304a', `
   <g class="body">
     <path d="M18 120 Q22 90 60 88 Q98 90 102 120 Z" fill="#3e6ff4"/>
@@ -62,7 +62,7 @@ export const AVATARS = [
   </g>`),
   },
   {
-    id: 'robo', name: 'Robo',
+    id: 'robo', name: 'Robo', who: 'Robo',
     svg: () => wrap('#1f3a4a', `
   <g class="body">
     <rect x="22" y="90" width="76" height="40" rx="14" fill="#7d93b8"/>
@@ -78,7 +78,7 @@ export const AVATARS = [
   </g>`),
   },
   {
-    id: 'fuchs', name: 'Fuchs',
+    id: 'fuchs', name: 'Fuchs', who: 'Fuchsi',
     svg: () => wrap('#3b2f3f', `
   <g class="body">
     <path d="M18 120 Q22 92 60 90 Q98 92 102 120 Z" fill="#e8742c"/>
@@ -94,7 +94,7 @@ export const AVATARS = [
   </g>`),
   },
   {
-    id: 'katze', name: 'Katze',
+    id: 'katze', name: 'Katze', who: 'Mieze',
     svg: () => wrap('#2f3a45', `
   <g class="body">
     <path d="M18 120 Q22 92 60 90 Q98 92 102 120 Z" fill="#59b9a8"/>
@@ -110,8 +110,110 @@ export const AVATARS = [
     </g>
   </g>`),
   },
+  {
+    id: 'jonas', name: 'Jonas', who: 'Jonas',
+    svg: () => wrap('#2f4a3a', `
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#f08c3a"/>
+    <path d="M44 91 Q60 102 76 91" fill="none" stroke="#c96d22" stroke-width="3" stroke-linecap="round"/>
+    <path d="M54 98 V110 M66 98 V110" stroke="#fff4e6" stroke-width="1.8" stroke-linecap="round"/>
+    <g class="head">
+      <rect x="52" y="78" width="16" height="16" rx="6" fill="#dca983"/>
+      <circle cx="34" cy="58" r="4.5" fill="#e8b894"/><circle cx="86" cy="58" r="4.5" fill="#e8b894"/>
+      <ellipse cx="60" cy="54" rx="26" ry="29" fill="#f3c9a3"/>
+      <path d="M33 46 Q36 36 46 38 Q60 34 74 38 Q84 36 87 46 Q80 40 60 41 Q40 40 33 46 Z" fill="#6b4226"/>
+      <path d="M31 36 Q31 10 60 9 Q89 10 89 36 Z" fill="#3e6ff4"/>
+      <rect x="29" y="31" width="62" height="9" rx="4.5" fill="#2f56c4"/>
+      <circle cx="60" cy="8" r="4" fill="#9bb8ff"/>
+      ${face({ brow: '#4a2f1a' })}
+    </g>
+  </g>`),
+  },
+  {
+    id: 'aylin', name: 'Aylin', who: 'Aylin',
+    svg: () => wrap('#4a2f4a', `
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#ffc83d"/>
+    <path d="M46 91 Q60 106 74 91 L70 120 H50 Z" fill="#fff4e6"/>
+    <g class="head">
+      <circle cx="36" cy="36" r="14" fill="#2a1a14"/><circle cx="60" cy="25" r="16" fill="#2a1a14"/><circle cx="84" cy="36" r="14" fill="#2a1a14"/>
+      <circle cx="27" cy="54" r="9" fill="#2a1a14"/><circle cx="93" cy="54" r="9" fill="#2a1a14"/>
+      <rect x="52" y="78" width="16" height="16" rx="6" fill="#86513a"/>
+      <ellipse cx="60" cy="55" rx="26" ry="28" fill="#9b6444"/>
+      <path d="M34 48 Q38 30 60 29 Q82 30 86 48 Q74 38 60 38 Q46 38 34 48 Z" fill="#2a1a14"/>
+      <circle cx="34" cy="66" r="2.6" fill="#ffd166"/><circle cx="86" cy="66" r="2.6" fill="#ffd166"/>
+      ${face({ brow: '#2a1a14', cheek: '#d9667a', mouth: '#7a2434' })}
+    </g>
+  </g>`),
+  },
+  {
+    id: 'kai', name: 'Kai', who: 'Kai',
+    svg: () => wrap('#1f3d4d', `
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#25b5a0"/>
+    <path d="M42 92 L60 110 L78 92" fill="none" stroke="#f4f6ff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M60 110 V120" stroke="#f4f6ff" stroke-width="3"/>
+    <g class="head">
+      <rect x="52" y="78" width="16" height="16" rx="6" fill="#c8946c"/>
+      <circle cx="34" cy="58" r="4.5" fill="#d3a07a"/><circle cx="86" cy="58" r="4.5" fill="#d3a07a"/>
+      <ellipse cx="60" cy="54" rx="26" ry="29" fill="#d9a47c"/>
+      <path d="M32 38 Q34 12 60 11 Q86 12 88 38 Z" fill="#e5484d"/>
+      <path d="M30 36 H92 Q100 36 102 41 H30 Z" fill="#b9343a"/>
+      ${face({ brow: '#3a2416', mouth: '#8a3a3a' })}
+    </g>
+  </g>`),
+  },
+  {
+    id: 'rosi', name: 'Rosi', who: 'Rosi',
+    svg: () => wrap('#4a3b2f', `
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#9a6bc7"/>
+    <path d="M46 91 L60 112 L74 91 Q60 100 46 91 Z" fill="#f4f6ff"/>
+    <g fill="#fff4e6"><circle cx="46" cy="94" r="2.3"/><circle cx="52" cy="98" r="2.3"/><circle cx="60" cy="100" r="2.3"/><circle cx="68" cy="98" r="2.3"/><circle cx="74" cy="94" r="2.3"/></g>
+    <g class="head">
+      <circle cx="60" cy="12" r="11" fill="#eceef5"/>
+      <rect x="52" y="78" width="16" height="16" rx="6" fill="#e6bd98"/>
+      <ellipse cx="60" cy="54" rx="26" ry="29" fill="#f2cfae"/>
+      <path d="M31 52 Q30 20 60 19 Q90 20 89 52 Q80 34 60 36 Q40 34 31 52 Z" fill="#eceef5"/>
+      ${face({ brow: '#9aa0b4', cheek: '#ff9fb0', mouth: '#b0485a' })}
+    </g>
+  </g>`),
+  },
+  {
+    id: 'astro', name: 'Astro', who: 'Astro',
+    svg: () => wrap('#12122a', `
+  <g fill="#fff" opacity=".8"><circle cx="14" cy="20" r="1.4"/><circle cx="104" cy="14" r="1.2"/><circle cx="108" cy="78" r="1.4"/><circle cx="10" cy="86" r="1.2"/><circle cx="92" cy="104" r="1"/></g>
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#f4f6ff"/>
+    <rect x="30" y="104" width="60" height="6" fill="#ff8a3d"/>
+    <circle cx="44" cy="98" r="3.5" fill="#e5484d"/><circle cx="76" cy="98" r="3.5" fill="#3e6ff4"/>
+    <g class="head">
+      <circle cx="60" cy="54" r="38" fill="#e3e9f7" stroke="#aab6d6" stroke-width="3"/>
+      <ellipse cx="60" cy="56" rx="30" ry="27" fill="#1d2a52"/>
+      <path d="M38 40 Q46 32 58 33" fill="none" stroke="#ffffff55" stroke-width="3" stroke-linecap="round"/>
+      ${face({ mouth: '#8fd6ff', brow: '#8fd6ff', eye: '#e8fbff', pupil: '#0b3a52', cheeks: false })}
+    </g>
+  </g>`),
+  },
+  {
+    id: 'bao', name: 'Bao (Panda)', who: 'Bao',
+    svg: () => wrap('#2a4a40', `
+  <g class="body">
+    <path d="M14 120 Q18 92 60 90 Q102 92 106 120 Z" fill="#2c2c34"/>
+    <path d="M42 92 Q60 108 78 92 L74 100 Q60 114 46 100 Z" fill="#6fd08c"/>
+    <g class="head">
+      <circle cx="35" cy="28" r="11" fill="#2c2c34"/><circle cx="85" cy="28" r="11" fill="#2c2c34"/>
+      <ellipse cx="60" cy="56" rx="31" ry="28" fill="#f4f6ff"/>
+      <ellipse cx="48" cy="56" rx="9" ry="11" fill="#2c2c34" transform="rotate(20 48 56)"/>
+      <ellipse cx="72" cy="56" rx="9" ry="11" fill="#2c2c34" transform="rotate(-20 72 56)"/>
+      <ellipse cx="60" cy="66" rx="4.4" ry="3.2" fill="#2c2c34"/>
+      ${face({ brow: '#555a6a', cheek: '#ffb3c1', mouth: '#2c2c34' })}
+    </g>
+  </g>`),
+  },
 ];
 
+export function coachName(id) { return (AVATARS.find((a) => a.id === id) || AVATARS[0]).who; }
 export function avatarSvg(id) { return (AVATARS.find((a) => a.id === id) || AVATARS[0]).svg(); }
 
 export function createCoach(root, avatarId = 'mira') {
