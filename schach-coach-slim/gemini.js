@@ -9,7 +9,7 @@ Keine Tabellen, keine Überschriften, höchstens 3 kurze Absätze.`;
 
 export async function askGemini(settings, prompt) {
   if (!settings.apiKey) throw new Error('Kein Gemini-API-Key hinterlegt (Einstellungen).');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model || 'gemini-3.8-flash')}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model || 'gemini-flash-latest')}:generateContent`;
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
