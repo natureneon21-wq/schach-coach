@@ -29,8 +29,11 @@ const SHAPES = {
 
 // Eigene Formen pro Stil (alle selbst gezeichnet, keine fremden Vorlagen). "d" = Linie, "e" = Auge/Leuchtpunkt.
 const BASE_ST = '<rect x="11.5" y="34.5" width="22" height="3" rx="1.5"/><rect x="10" y="37.5" width="25" height="3.5" rx="1.7"/>';
-const BASE_CY = '<path d="M10 40.5 V37 L12.5 35 H32.5 L35 37 V40.5 Z"/>';
-const BASE_AL = '<path d="M9.5 40.5 C9.5 37 12 35.5 14 35 H31 C33 35.5 35.5 37 35.5 40.5 Z"/><path class="d" d="M14 38 H31"/>';
+const BASE_CY = '<path d="M11 40.5 L13.5 37.5 H31.5 L34 40.5 Z"/>';
+const BASE_AL = '<path d="M8 40.5 C8 36.5 13 34.5 22.5 34.5 C32 34.5 37 36.5 37 40.5 Z"/><path class="d" d="M12 38 C18 39.4 27 39.4 33 38"/>';
+const T = (d, w) => `<path class="to" style="stroke-width:${w + 2.6}" d="${d}"/><path class="tb" style="stroke-width:${w}" d="${d}"/>`;
+const BASE_GO2 = '<path d="M8 40.5 L10 36 L14 38 L18 35 L22.5 38 L27 35 L31 38 L35 36 L37 40.5 Z"/>';
+const BASE_DU2 = '<path d="M8 40.5 L10 37.5 L15 38.5 L19 36 L24 38 L29 36 L34 38.5 L37 40.5 Z"/>';
 const BASE_GO = '<path d="M9.5 40.5 L11 37 H34 L35.5 40.5 Z"/><path d="M12 37 L14 34 H31 L33 37 Z"/>';
 const BASE_DU = '<rect x="10.5" y="36" width="24" height="4.5" rx=".8"/><path class="d" d="M10.5 38 H20 M24 38.5 H34.5"/>';
 const SHAPE_SETS = {
@@ -43,36 +46,36 @@ const SHAPE_SETS = {
     k: '<rect x="21" y="2.5" width="3" height="9.5" rx=".8"/><rect x="17.8" y="5.5" width="9.4" height="3" rx=".8"/><path d="M14 17.5 C14 14.5 18 13 22.5 13 C27 13 31 14.5 31 17.5 C31 20 29 21 28 22 L29.5 34.5 H15.5 L17 22 C16 21 14 20 14 17.5 Z"/>' + BASE_ST,
   },
   cyber: {
-    p: '<path d="M22.5 6 L27.5 9.5 V15 L24.5 18 L27 20.5 V30.5 L30.5 35 H14.5 L18 30.5 V20.5 L20.5 18 L17.5 15 V9.5 Z"/><path class="e" d="M19.5 11 H25.5 V13 H19.5 Z"/><path class="d" d="M22.5 22 V31"/>' + BASE_CY,
-    r: '<path d="M12 7 H18 V12 H21 V7 H24 V12 H27 V7 H33 V17 L29.5 20 V30.5 L33 35 H12 L15.5 30.5 V20 L12 17 Z"/><path class="d" d="M19 22 V30 M26 22 V27 L24 30"/><path class="e" d="M18.5 14.5 H26.5 V16 H18.5 Z"/>' + BASE_CY,
-    n: '<path d="M12 35 V32 L16 25 L14 20 L13 15 L19 8 L21 4.5 L24 8 C31 9 35 15 35 24 L33 35 Z"/><path class="e" d="M16.5 13 L21 12 L21.5 14.5 L17 16 Z"/><path class="d" d="M24 11 L30 17 L31 25"/>' + BASE_CY,
-    b: '<path d="M22.5 3.5 L28 12 L30 20 L26 26 V30.5 L30 35 H15 L19 30.5 V26 L15 20 L17 12 Z"/><path class="d" d="M22.5 8 V11"/><path class="e" d="M22.5 13 L24.2 16.2 L22.5 19.4 L20.8 16.2 Z"/>' + BASE_CY,
-    q: '<path d="M10 11 L15 26 L17 10 L20 26 L22.5 6 L25 26 L28 10 L30 26 L35 11 L32 35 H13 Z"/><path class="d" d="M16 30 H29"/><path class="e" d="M21 17 H24 V20 H21 Z"/>' + BASE_CY,
-    k: '<path d="M20.5 2 H24.5 V6 H28 V9.5 H24.5 V13 H20.5 V9.5 H17 V6 H20.5 Z"/><path d="M13 35 L14 22 L18 16 H27 L31 22 L32 35 Z"/><path class="e" d="M18 22 H27 V25 H18 Z"/>' + BASE_CY,
+    p: '<path d="M22.5 5 L29 14 L22.5 23 L16 14 Z"/><path class="e" d="M22.5 10 L25 14 L22.5 18 L20 14 Z"/><path class="d" d="M22.5 24 V35"/>' + BASE_CY,
+    r: '<rect x="14" y="26" width="17" height="9"/><rect x="11" y="17" width="14" height="8"/><rect x="18" y="8" width="15" height="8"/><path class="e" d="M16 29 H20 V31 H16 Z M13 20 H17 V22 H13 Z M27 11 H31 V13 H27 Z"/>' + BASE_CY,
+    n: '<path d="M12 35 L18 13 L22 17 L34 9 L31 23 L33 35 Z"/><path class="e" d="M24 15 L29 13 L27.5 17 Z"/><path class="d" d="M12 35 L24 24 L33 35"/>' + BASE_CY,
+    b: '<path d="M22.5 1.5 L29 11 L26.5 30 H18.5 L16 11 Z"/><path class="d" d="M22.5 2 V30"/><ellipse class="d" cx="22.5" cy="20" rx="12" ry="3.4"/><path class="e" d="M22.5 8 L24 11 L22.5 14 L21 11 Z"/>' + BASE_CY,
+    q: '<path d="M8 8 L12 22 L16 11 Z"/><path d="M15 3 L19 22 L24 7 Z"/><path d="M26 7 L26 22 L31 3 Z"/><path d="M29 11 L33 22 L37 8 Z"/><path d="M22.5 22 L28 27.5 L22.5 34 L17 27.5 Z"/><path class="e" d="M22.5 25.5 L24.4 27.5 L22.5 30 L20.6 27.5 Z"/>' + BASE_CY,
+    k: '<path d="M17.5 35 V15 L22.5 9 L27.5 15 V35 Z"/><ellipse class="d" cx="22.5" cy="11" rx="12" ry="4"/><path class="d" d="M22.5 1 V9"/><path class="e" d="M21 17 H24 V31 H21 Z"/>' + BASE_CY,
   },
   alien: {
-    p: '<path d="M22.5 3 C29 3 31 10 29.5 16 L28 20 H17 L15.5 16 C14 10 16 3 22.5 3 Z"/><path class="d" d="M22.5 4 V15"/><path class="e" d="M18.8 11 Q20.3 14.5 21.6 11 Z M23.4 11 Q24.7 14.5 26.2 11 Z"/><path d="M18 21 C19 26 17 30 14 34.5 H31 C28 30 26 26 27 21 Z"/><path class="d" d="M19 25 H26 M17.5 29 H27.5"/>' + BASE_AL,
-    r: '<path d="M13 8 H17 L18 12 H27 L28 8 H32 V18 L29 21 V30.5 L32 34 H13 L16 30.5 V21 L13 18 Z"/><path class="d" d="M19 21.5 V31 M22.5 21.5 V31 M26 21.5 V31"/><path class="d" d="M18 15 H27"/>' + BASE_AL,
-    n: '<path d="M12 35 C12 30 14 26 17 22 L12 21 C11 19 12 17 14 16 L22 11 C24 7 28 4 34 4 C32 8 31.5 10 30 12 C34 16 35 22 34 28 L33 35 Z"/><path class="d" d="M13 18 L21 17.5 M14.5 20 L20 19.5"/><path class="e" d="M24 14 L28 13 L27 16 Z"/><path class="d" d="M30 14 C32 18 32 24 31 30"/>' + BASE_AL,
-    b: '<path d="M22.5 2.5 C29 6 31 14 29 21 L27.5 24 H17.5 L16 21 C14 14 16 6 22.5 2.5 Z"/><path class="d" d="M22.5 6 V19"/><path d="M18.5 25 L19 32 L15 35 H30 L26 32 L26.5 25 Z"/><path class="d" d="M19 28 H26"/>' + BASE_AL,
-    q: '<path d="M9 9 C11 16 12 22 14 27 C15 20 15 14 17 8 C18 14 19 20 20.5 26 C21 18 21.5 10 22.5 3 C23.5 10 24 18 24.5 26 C26 20 27 14 28 8 C30 14 30 20 31 27 C33 22 34 16 36 9 L33 34.5 H12 Z"/><path class="d" d="M16 31 H29"/>' + BASE_AL,
-    k: '<path d="M21 2 H24 V8 H29 V11 H24 V15 H21 V11 H16 V8 H21 Z"/><path d="M13.5 35 C12 26 15 18 22.5 16 C30 18 33 26 31.5 35 Z"/><path class="d" d="M16.5 24 C20 26 25 26 28.5 24 M15.5 29 H29.5"/><path class="d" d="M22.5 17 V34"/>' + BASE_AL,
+    p: T('M22.5 34 C22.5 27 17 25 18 19 C19 13 26 13 26.5 18 C27 22 22.5 22 22.5 18.5', 4.4) + '<circle class="e" cx="22.5" cy="18.4" r="1.2"/>' + BASE_AL,
+    r: T('M17 34 C28 29 17 24 27 19 C30 17 28.5 13 24 11', 4) + T('M28 34 C17 29 28 24 18 19 C15 17 16.5 13 21 11', 4) + '<path d="M13.5 6 H31.5 L29.5 11.5 H15.5 Z"/>' + BASE_AL,
+    n: T('M20 34 C15 26 22 22 20 16 C18 10.5 25 5.5 30.5 9 C34 11.5 32 17.5 28 16', 5.4) + T('M26 34 C30 30 34 31 36 25.5', 3) + '<circle class="e" cx="25.5" cy="10.5" r="1.4"/>' + BASE_AL,
+    b: '<path d="M22.5 2 C31 9 30.5 18 22.5 24 C14.5 18 14 9 22.5 2 Z"/><path class="d" d="M22.5 7 V19"/>' + T('M22.5 24 C19.5 28 25.5 30 22.5 34', 3.8) + BASE_AL,
+    q: T('M22.5 27 C17 22 11 18 10 9', 3) + T('M22.5 27 C19 21 17 14 17 6', 3) + T('M22.5 27 C22 19 23 12 22.5 3', 3) + T('M22.5 27 C26 21 28 14 28 6', 3) + T('M22.5 27 C28 22 34 18 35 9', 3) + '<circle cx="22.5" cy="28" r="5.8"/><circle class="e" cx="22.5" cy="28" r="1.8"/>' + BASE_AL,
+    k: '<path d="M22.5 2 C32 5 31 20 22.5 24 C14 20 13 5 22.5 2 Z"/><path class="d" d="M22.5 4 V21 M16 12 H29"/>' + T('M22.5 24 C16 28 29 30 22.5 34', 4.6) + BASE_AL,
   },
   gothic: {
-    p: '<path d="M22.5 3.5 C25 8 27 11 26 15 C28 17 28.5 19 27 21 C28 26 29 30 31.5 34 H13.5 C16 30 17 26 18 21 C16.5 19 17 17 19 15 C18 11 20 8 22.5 3.5 Z"/><path class="d" d="M22.5 10 V28"/>' + BASE_GO,
-    r: '<path d="M13 6 L15.5 11 L18 6 L20.5 11 L22.5 5 L24.5 11 L27 6 L29.5 11 L32 6 V19 L29 22 V30.5 L32 33.5 H13 L16 30.5 V22 L13 19 Z"/><path class="e" d="M20.3 31 V25.5 Q22.5 22 24.7 25.5 V31 Z"/>' + BASE_GO,
-    n: '<path d="M12.5 34 C12.5 30 14 25.5 18 22 L13 20 L12 15 L16 12 L14.5 4 L20 8 L24 7 C31 8 34 14 34 24 L33 34 Z"/><path class="e" d="M18.5 12.5 L21 12 L20.8 14 Z"/><path class="d" d="M23 10 C27 12 29 17 29 22 M26 9 C30 11 32 16 32 21"/>' + BASE_GO,
-    b: '<path d="M22.5 3 C26 8 31 12 30.5 19 C30.3 21.5 29 23 27 24 H18 C16 23 14.7 21.5 14.5 19 C14 12 19 8 22.5 3 Z"/><path class="d" d="M22.5 9 V17 M19.5 12.5 H25.5"/><path d="M18.5 24.5 C19.5 28 18 31 15 33.5 H30 C27 31 25.5 28 26.5 24.5 Z"/>' + BASE_GO,
-    q: '<path d="M9 10 C11 16 12 22 14 27 C15 20 15 14 17 8 C18 14 19 20 20.5 26 C21 18 21.5 10 22.5 3 C23.5 10 24 18 24.5 26 C26 20 27 14 28 8 C30 14 30 20 31 27 C33 22 34 16 36 10 L33 34 H12 Z"/><path class="e" d="M22.5 22 L24 26 L22.5 30 L21 26 Z"/>' + BASE_GO,
-    k: '<path d="M21 1.5 H24 V5 H27.5 V8 H24 V12 H21 V8 H17.5 V5 H21 Z"/><path d="M14 34 L15 23 C15 19 19 16.5 22.5 14.5 C26 16.5 30 19 30 23 L31 34 Z"/><path class="e" d="M20.3 31 V24.5 Q22.5 21 24.7 24.5 V31 Z"/>' + BASE_GO,
+    p: '<path d="M22.5 34 C16 26 18 14 26 3 C25 14 30 22 28 34 Z"/><path class="d" d="M23 10 C22 18 23 26 23.5 33"/>' + BASE_GO2,
+    r: '<path d="M11.5 35 V17 L15.5 5 L19.5 17 V35 Z"/><path d="M18.5 35 V12 L22.5 1.5 L26.5 12 V35 Z"/><path d="M25.5 35 V17 L29.5 5 L33.5 17 V35 Z"/><path class="e" d="M20.8 33 V24 Q22.5 19 24.2 24 V33 Z"/>' + BASE_GO2,
+    n: '<path d="M14 35 L15 24 C15 19 19 16 22.5 16 C26 16 30 19 30 24 L31 35 Z"/><path d="M16 19 C10 17 8 11 9 4 C13 9 16 11 19 14 Z"/><path d="M29 19 C35 17 37 11 36 4 C32 9 29 11 26 14 Z"/><path class="e" d="M17.5 22 L21 23 L18 25 Z M27.5 22 L24 23 L27 25 Z"/>' + BASE_GO2,
+    b: '<path d="M22.5 1.5 C25 10 31 14 31 22 V34 H14 V22 C14 14 20 10 22.5 1.5 Z"/><path class="e" d="M19.3 33 V24 Q22.5 17 25.7 24 V33 Z"/><path class="d" d="M22.5 7 V12 M20.2 9.5 H24.8"/>' + BASE_GO2,
+    q: '<path d="M22.5 34 L5 14 L16 22 L10 5 L19 20 L22.5 1 L26 20 L35 5 L29 22 L40 14 Z"/><path class="e" d="M22.5 23 L24.5 27.5 L22.5 32 L20.5 27.5 Z"/>' + BASE_GO2,
+    k: '<path d="M22.5 1 L25 9 L33 7.5 L28 15 L31 34 H14 L17 15 L12 7.5 L20 9 Z"/><path class="e" d="M22.5 16 L24.5 23 L22.5 31 L20.5 23 Z"/>' + BASE_GO2,
   },
   duester: {
-    p: '<path d="M15 19 C15 10 19 5 22.5 5 C26 5 30 10 30 19 V22 H15 Z"/><path class="e" d="M17.5 13 H27.5 V15 H17.5 Z"/><path d="M17 23 L15 35 H30 L28 23 Z"/><path class="d" d="M22.5 23 V35"/>' + BASE_DU,
-    r: '<path d="M13 12 L16 8 L18 12 L21 6 L24 11 L27 7 L29 12 L32 10 V19 L29 22 V30.5 L32 34 H13 L16 30.5 V22 L13 19 Z"/><path class="d" d="M20 24 L22 28 L21 32"/><path class="e" d="M25 24 V27"/>' + BASE_DU,
-    n: '<path d="M12.5 36 C12.5 31 14 26 18 22 L13 20 L12.5 15 L18 8 C19 6 21 5 22 5 C23 6 24 6.5 24.5 8 C31 9 34 15 34 25 C34 30 34 33 33 36 Z"/><path class="e" d="M15.5 13.5 L19.5 12.5 L19.5 14.5 Z"/><path class="d" d="M16 18 L24 15 L30 22 M24.5 8 C27 5 31 5 33 7"/>' + BASE_DU,
-    b: '<path d="M22.5 4 C28 4 31 9 30 14 C30 17 29 19 28 21 L31 28 V34 H14 V28 L17 21 C16 19 15 17 15 14 C14 9 17 4 22.5 4 Z"/><path class="e" d="M19.5 11 H25.5 V17 L22.5 19 L19.5 17 Z"/>' + BASE_DU,
-    q: '<path d="M10 14 L14 10 L17 24 L19 8 L22.5 22 L26 8 L28 24 L31 10 L35 14 L32 35 H13 Z"/><path class="d" d="M17 30 H28"/><path class="e" d="M21.5 25 H23.5 V27 H21.5 Z"/>' + BASE_DU,
-    k: '<path d="M21 2 H24 V21 H21 Z"/><rect x="15" y="12" width="15" height="3" rx="1"/><path d="M14 35 L15 24 C15 22 18 21 22.5 21 C27 21 30 22 30 24 L31 35 Z"/><path class="e" d="M22.5 24 V31"/>' + BASE_DU,
+    p: '<path d="M13 35 L15 29 H30 L32 35 Z"/><path d="M16 29 L18 23 H27 L29 29 Z"/><path d="M19 23 L21 18 H25 L26 23 Z"/><path class="e" d="M22.5 7 C26 11 25 14.5 22.5 17 C20 14.5 19 11 22.5 7 Z"/>' + BASE_DU2,
+    r: '<path d="M13 35 V14 L17 12 L19 16 L23 10 L27 15 L32 13 V35 Z"/><path class="d" d="M18 24 L21 28 L19 33 M27 20 V26"/><path class="e" d="M22.5 22 C25 26 24 29 22.5 31 C21 29 20 26 22.5 22 Z"/>' + BASE_DU2,
+    n: '<path d="M14 35 V20 C14 12 18 8 23 8 C28 8 31 12 31 20 V35 Z"/><path d="M24 8 C26 2 33 1 37 6 C32 4 29 6 28 10 Z"/><path class="e" d="M17 19 H28 V21.5 H17 Z"/><path class="d" d="M22.5 22 V35 M14 28 H31"/>' + BASE_DU2,
+    b: '<path d="M14 34 L16.5 20 C14.5 15 16.5 7 22 7 C27.5 7 29.5 15 27.5 20 L30 34 Z"/><path class="e" d="M19.5 14 H24.5 V18.5 H19.5 Z"/><path class="d" d="M36 10 V34"/><circle cx="36" cy="8" r="2.6"/>' + BASE_DU2,
+    q: '<path d="M11 15 L15 8 L18.5 14 L22.5 5 L26.5 14 L30 8 L34 15 L31 20 L33 35 H12 L14 20 Z"/><path class="e" d="M19 18 H26 V21 H19 Z"/>' + BASE_DU2,
+    k: '<circle cx="22.5" cy="3.4" r="2.3"/><rect x="21" y="5" width="3" height="6"/><path d="M10.5 9.5 C14 12 17 11.5 20 11.5 H25 C28 11.5 31 12 34.5 9.5 C33 15 28.5 15.5 25 15 H20 C16.5 15.5 12 15 10.5 9.5 Z"/><path d="M20 15 H25 L24 33 L22.5 37 L21 33 Z"/><path class="e" d="M22.5 18 V30"/>' + BASE_DU2,
   },
 };
 
