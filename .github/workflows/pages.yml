@@ -45,6 +45,14 @@ jobs:
           cp "/tmp/sf/$WASM" _site/vendor/stockfish.wasm
           ls -la _site _site/vendor
 
+      - name: Wissensdatenbank bauen (freie Schachquellen, nicht im Repo gespeichert)
+        run: |
+          SRC=schach-coach-slim
+          if [ -f index.html ]; then SRC=.; fi
+          node "$SRC/tools/build-wissen.mjs" _site/wissen || echo "Wissensdatenbank konnte nicht gebaut werden"
+          rm -rf _site/tools
+          du -sh _site/wissen || true
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
