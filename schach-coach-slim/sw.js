@@ -1,7 +1,7 @@
 // KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren.
 // Service Worker: App-Dateien "network first" (Updates kommen sofort an), große Bibliotheken "cache first" (offline nutzbar).
 const VERSION = 'v3';
-const CORE = ['./', 'index.html', 'style.css', 'app.js', 'engine.js', 'analysis.js', 'board.js', 'coach.js', 'gemini.js', 'pieces.js', 'look.js', 'wissen.js',
+const CORE = ['./', 'index.html', 'style.css', 'app.js', 'engine.js', 'analysis.js', 'board.js', 'coach.js', 'gemini.js', 'pieces.js', 'look.js', 'wissen.js', 'persona.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const VENDOR = ['vendor/chess.js', 'vendor/stockfish.js', 'vendor/stockfish.wasm'];
 
