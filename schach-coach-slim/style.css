@@ -222,3 +222,28 @@ body[data-ctl=drawer] .controls { position: absolute; right: 0; bottom: 6px; z-i
 body[data-ctl=drawer] .controls.open { transform: translateX(0); }
 body[data-ctl=drawer] .controls .btn { flex: none; padding: 11px 8px; }
 body[data-ctl=drawer] .ctl-tab { display: flex; align-items: center; justify-content: center; position: absolute; left: -26px; bottom: 14px; width: 26px; height: 64px; border: 0; border-radius: 12px 0 0 12px; background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer; box-shadow: -3px 0 10px #0006; }
+
+/* Stil-Sets */
+.pcs.set-staunton svg path:not(.d):not(.e), .pcs.set-staunton svg circle:not(.e), .pcs.set-staunton svg rect { stroke-width: 1.2; }
+.pcs.set-staunton.w svg path:not(.d):not(.e), .pcs.set-staunton.w svg circle:not(.e), .pcs.set-staunton.w svg rect { fill: url(#g-w); }
+.pcs.set-staunton.b svg path:not(.d):not(.e), .pcs.set-staunton.b svg circle:not(.e), .pcs.set-staunton.b svg rect { fill: url(#g-b); }
+.pcs.set-staunton svg .d { stroke: var(--po); stroke-width: 1.1; opacity: .7; }
+.pcs.set-cyber { filter: drop-shadow(0 0 1.4cqw var(--pf)); }
+.pcs.set-cyber svg path, .pcs.set-cyber svg rect { fill: var(--pf); fill-opacity: .16; stroke: var(--pf); stroke-width: 1.7; stroke-linejoin: miter; }
+.pcs.set-cyber svg .d { fill: none; stroke: var(--pf); stroke-width: 1.1; }
+.pcs.set-cyber svg .e { fill: var(--pf); fill-opacity: 1; stroke: none; }
+.pcs.set-alien svg path:not(.d):not(.e), .pcs.set-alien svg rect { stroke-width: 1.3; }
+.pcs.set-alien.w svg path:not(.d):not(.e) { fill: url(#g-w); } .pcs.set-alien.b svg path:not(.d):not(.e) { fill: url(#g-b); }
+.pcs.set-alien svg .d { stroke: var(--po); stroke-width: 1.1; }
+.pcs.set-alien svg .e { fill: var(--po); }
+.pcs.set-alien.b svg .d { stroke: #8fa3ad; opacity: .55; }
+.pcs.set-gothic svg path:not(.d):not(.e) { stroke-width: 1.3; stroke-linejoin: miter; }
+.pcs.set-gothic.w svg path:not(.d):not(.e) { fill: url(#g-w); } .pcs.set-gothic.b svg path:not(.d):not(.e) { fill: url(#g-b); }
+.pcs.set-gothic svg .d { stroke: var(--po); stroke-width: 1.1; }
+.pcs.set-gothic svg .e { fill: var(--po); }
+.pcs.set-gothic.b svg .e { fill: #e23b4a; }
+.pcs.set-duester svg path:not(.d):not(.e), .pcs.set-duester svg rect { stroke-width: 1.4; stroke-linejoin: miter; }
+.pcs.set-duester.w svg path:not(.d):not(.e), .pcs.set-duester.w svg rect { fill: url(#g-w); } .pcs.set-duester.b svg path:not(.d):not(.e), .pcs.set-duester.b svg rect { fill: url(#g-b); }
+.pcs.set-duester svg .d { stroke: var(--po); stroke-width: 1.1; opacity: .8; }
+.pcs.set-duester svg .e { fill: #ff8a3d; }
+.pcs.set-duester { filter: drop-shadow(0 0 .5cqw #ff8a3d55); }
