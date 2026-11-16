@@ -432,7 +432,7 @@ function saveGame() {
     item = { id: G.id, date: Date.now(), userColor: G.userColor, level: G.level, result: G.result || 'abandoned', ucis: G.moves.map((m) => m.uci), takebacks: G.takebacks };
     hist.unshift(item);
   } else { item.result = G.result || item.result; item.ucis = G.moves.map((m) => m.uci); }
-  store.set('history', hist.slice(0, 15));
+  store.set('history', hist.slice(0, 1000));
   return item;
 }
 
