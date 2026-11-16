@@ -68,23 +68,44 @@ function addSource(meta, text) {
   console.log(`  + ${meta.title} (${chunks.length} Abschnitte)`);
 }
 
-// --- Project Gutenberg (gemeinfrei) über Gutendex ---
+// Minimaler CSV-Parser (Anführungszeichen, Kommas und Zeilenumbrüche in Feldern)
+function parseCsv(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+// --- Project Gutenberg (gemeinfrei) ---
 async function gutenberg() {
   console.log('Project Gutenberg …');
   const books = new Map();
-  let url = 'https://gutendex.com/books/?topic=chess&languages=en';
-  for (let page = 0; url && page < 6; page++) {
-    const r = await get(url);
-    if (!r) break;
-    const j = await r.json();
-    for (const b of j.results || []) books.set(b.id, b);
-    url = j.next;
+  // Offizieller Katalog (CSV) von Project Gutenberg: alle englischen Texte mit dem Thema "Chess"
+  const cat = await get('https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv');
+  if (cat) {
+    const rows = parseCsv(await cat.text());
+    const head = rows.shift() || [];
+    const ix = Object.fromEntries(head.map((h, i) => [h, i]));
+    for (const r of rows) {
+      if (r[ix['Type']] !== 'Text' || !/^en(;|$)/.test(r[ix['Language']] || '')) continue;
+      const cs = (r[ix['Subjects']] || '').split(';').filter((x) => /chess/i.test(x));
+      const shelf = /chess/i.test(r[ix['Bookshelves']] || '');
+      if (!shelf && !cs.some((x) => !/fiction|poetry|drama|juvenile/i.test(x))) continue; // keine Romane
+      const id = Number(r[ix['Text#']]);
+      books.set(id, { id, title: r[ix['Title']], authors: [{ name: r[ix['Authors']] }], formats: {} });
+    }
+    console.log(`  Katalog: ${books.size} Schach-Texte`);
   }
-  // Fallback, falls Gutendex nicht erreichbar ist
+  // Fallback, falls der Katalog nicht erreichbar ist
   if (!books.size) [33870].forEach((id) => books.set(id, { id, title: 'Chess Fundamentals', authors: [{ name: 'Capablanca, José Raúl' }], formats: {} }));
   for (const b of books.values()) {
-    const subj = [...(b.subjects || []), ...(b.bookshelves || [])].join(' ');
-    if (b.subjects && !/chess/i.test(subj)) continue;
     const txtUrl = Object.entries(b.formats || {}).find(([k]) => k.startsWith('text/plain'))?.[1]
       || `https://www.gutenberg.org/cache/epub/${b.id}/pg${b.id}.txt`;
     const r = await get(txtUrl);
