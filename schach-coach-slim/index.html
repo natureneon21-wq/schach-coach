@@ -59,8 +59,9 @@
       <div id="coach-review"></div>
       <div id="review-progress" class="progress" hidden><div></div></div>
       <div class="board-wrap"><div id="board-review"></div></div>
+      <div class="rv-top"><div id="review-summary" class="status"></div><button class="btn small" id="rv-back">Liste</button></div>
       <svg id="graph" viewBox="0 0 300 50" preserveAspectRatio="none"></svg>
-      <div id="review-summary" class="status"></div>
+      <div id="rv-moves" class="movelist"></div>
       <div class="controls">
         <button class="btn" id="rv-first">«</button>
         <button class="btn" id="rv-prev">‹</button>
@@ -69,12 +70,11 @@
         <button class="btn primary" id="rv-crit">Nächster Fehler</button>
       </div>
       <div class="controls">
-        <button class="btn" id="rv-best">Besten Zug zeigen</button>
-        <button class="btn" id="rv-gem">Gemini erklärt</button>
-        <button class="btn" id="rv-gem-all">Gemini Fazit</button>
+        <button class="btn" id="rv-best">Vorher / Nachher</button>
+        <button class="btn primary" id="rv-practice">Ab hier üben</button>
+        <button class="btn" id="rv-gem">Gemini</button>
+        <button class="btn" id="rv-gem-all">Fazit</button>
       </div>
-      <div id="rv-moves" class="movelist"></div>
-      <button class="btn small" id="rv-back">Zur Liste</button>
     </div>
   </section>
 
