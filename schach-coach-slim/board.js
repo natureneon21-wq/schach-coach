@@ -1,7 +1,7 @@
 // KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren.
 import { Chess } from './vendor/chess.js';
+import { pieceHtml } from './pieces.js';
 
-const GLYPH = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
 const FILES = 'abcdefgh';
 
 /** Tipp-Tipp-Brett. Hält selbst keinen Spielstand, bekommt ihn per set(). */
@@ -58,13 +58,13 @@ export class Board {
       const row = Math.floor(i / 8), col = i % 8;
       if (col === 0) inner += `<i class="rk">${sq[1]}</i>`;
       if (row === 7) inner += `<i class="fl">${sq[0]}</i>`;
-      if (p) inner += `<b class="pc ${p.color}${this.last && this.last.to === sq ? ' pop' : ''}">${GLYPH[p.type]}︎</b>`;
+      if (p) inner += pieceHtml(p.type, p.color, this.last && this.last.to === sq ? ' pop' : '');
       html += `<div class="${cls.join(' ')}" data-sq="${sq}">${inner}</div>`;
     }
     html += this._arrowSvg();
     if (this.promo) {
       const col = this.promo.color;
-      html += `<div class="promo">${['q', 'r', 'b', 'n'].map((t) => `<button data-promo="${t}" class="pc ${col}">${GLYPH[t]}︎</button>`).join('')}</div>`;
+      html += `<div class="promo">${['q', 'r', 'b', 'n'].map((t) => `<button data-promo="${t}">${pieceHtml(t, col)}</button>`).join('')}</div>`;
     }
     this.el.innerHTML = html;
   }
