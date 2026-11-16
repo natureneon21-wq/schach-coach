@@ -52,7 +52,7 @@ h2 { margin: 6px 0; font-size: 20px; }
 
 /* Brett */
 .board-wrap { width: min(100%, 62dvh); margin: 0 auto; }
-.board { position: relative; width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); container-type: inline-size; user-select: none; touch-action: manipulation; border-radius: 6px; overflow: hidden; }
+.board { position: relative; width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); container-type: inline-size; user-select: none; -webkit-user-select: none; touch-action: none; border-radius: 6px; overflow: hidden; }
 .sq { position: relative; display: flex; align-items: center; justify-content: center; }
 .sq.light { background: var(--light); } .sq.dark { background: var(--dark); }
 .sq.last::before { content: ""; position: absolute; inset: 0; background: rgba(255, 214, 70, .45); }
@@ -324,3 +324,8 @@ body[data-layout=pip][data-pip-pos=bottom] dialog { margin-top: 8px; margin-bott
   body dialog { width: min(92vw, 520px); }
   body #toast { bottom: 28px; }
 }
+
+/* Drag & Drop */
+.ghost { position: absolute; z-index: 20; pointer-events: none; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 .8cqw 1cqw rgba(0,0,0,.4)); }
+.ghost .pc { font-size: 13cqw; }
+.sq.dragsrc .pc, .sq.dragsrc .pcs { opacity: .3; }
