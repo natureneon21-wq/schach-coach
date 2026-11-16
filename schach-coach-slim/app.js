@@ -146,7 +146,7 @@ function geminiData(rec, fb) {
     bestSan: uciToSan(rec.fenBefore, fb.bestUci), pv: pvToSan(rec.fenBefore, fb.pv, 5), facts: ex.facts,
   };
 }
-function cleanAI(t) { return t.replace(/\*+/g, '').replace(/^#+\s*/gm, ''); }
+function cleanAI(t) { return t.replace(/\*+/g, '').replace(/\$/g, '').replace(/`/g, '').replace(/^#+\s*/gm, ''); }
 
 /* =====================================================================
    SPIELEN
