@@ -247,3 +247,8 @@ body[data-ctl=drawer] .ctl-tab { display: flex; align-items: center; justify-con
 .pcs.set-duester svg .d { stroke: var(--po); stroke-width: 1.1; opacity: .8; }
 .pcs.set-duester svg .e { fill: #ff8a3d; }
 .pcs.set-duester { filter: drop-shadow(0 0 .5cqw #ff8a3d55); }
+.pcs svg .to { fill: none !important; stroke: var(--po) !important; stroke-linecap: round; }
+.pcs svg .tb { fill: none !important; stroke: var(--pf) !important; stroke-linecap: round; }
+.pcs.set-alien svg ellipse, .pcs.set-cyber svg ellipse { fill: none; }
+.pcs.set-cyber svg ellipse.d { stroke: var(--pf); stroke-width: 1.1; }
+.pcs.set-cyber svg .to { stroke: var(--pf) !important; }
