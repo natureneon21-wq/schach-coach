@@ -196,3 +196,5 @@ body[data-layout=pip] .view { gap: 5px; padding-top: 4px; }
 .src { display: flex; flex-direction: column; width: 100%; text-align: left; background: var(--panel); color: var(--text); border: 0; border-radius: 10px; padding: 10px 12px; margin: 4px 0; font-size: 14px; cursor: pointer; }
 .src small { color: var(--muted); margin-top: 2px; }
 #wq-main h3, #wq-reader h3 { font-size: 16px; margin: 10px 0 4px; }
+.srcrow { display: flex; gap: 6px; align-items: stretch; } .srcrow .src { flex: 1; min-width: 0; }
+#wq-file { color: var(--muted); font-size: 13px; }
