@@ -6,7 +6,54 @@
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-let meta = null, docs = null, index = null, loading = null;
+let meta = null, S = [], mine = [], docs = null, index = null, loading = null;
+
+// --- Eigene Quellen (PDF/Text) liegen nur lokal im Browser (IndexedDB), nie auf einem Server ---
+const idb = () => new Promise((res, rej) => {
+  const r = indexedDB.open('schach-wissen', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('eigene', { keyPath: 'id' });
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+});
+const idbDo = async (mode, fn) => {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('eigene', mode), st = tx.objectStore('eigene'), q = fn(st);
+    tx.oncomplete = () => res(q?.result); tx.onerror = () => rej(tx.error);
+  });
+};
+const ownAll = () => idbDo('readonly', (st) => st.getAll()).catch(() => []);
+const ownPut = (o) => idbDo('readwrite', (st) => st.put(o));
+const ownDel = (id) => idbDo('readwrite', (st) => st.delete(id));
+
+function chunkOwn(text, page) {
+  const out = [], sent = text.replace(/\r/g, '').replace(/-\n(?=[a-zäöü])/g, '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/);
+  let buf = '';
+  const flush = () => { if (buf.trim().length > 60) out.push({ h: page ? `Seite ${page}` : '', t: buf.trim() }); buf = ''; };
+  for (const x of sent) { if (buf && buf.length + x.length > 1000) flush(); buf += (buf ? ' ' : '') + x; }
+  flush();
+  return out;
+}
+async function readFileChunks(file, onProgress) {
+  if (/\.pdf$/i.test(file.name)) {
+    const pdfjs = await import('./vendor/pdf.min.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdf.worker.min.mjs', location.href).href;
+    const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+    const chunks = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent();
+      chunks.push(...chunkOwn(tc.items.map((it) => it.str + (it.hasEOL ? ' ' : '')).join(' '), i));
+      if (i % 10 === 0) onProgress?.(`${file.name}: Seite ${i}/${pdf.numPages}`);
+    }
+    return chunks;
+  }
+  return chunkOwn(await file.text(), 0);
+}
+async function refreshSources() {
+  await loadMeta();
+  mine = await ownAll();
+  S = [...meta.sources, ...mine.map((o) => ({ id: o.id, title: o.title, author: 'Eigene Datei', url: '', lic: 'Nur auf diesem Gerät', n: o.chunks.length, own: true }))];
+}
 
 const STOP = new Set('the a an and or of to in on at is are was were be been it its this that these those with for as by from not but if then so do does did have has had you your he she they we i his her their our which who what when where how can may will would should could than there here also very more most such no nor into out up down over under'.split(' '));
 const stem = (w) => (w.length > 4 && w.endsWith('ies') ? w.slice(0, -3) + 'y' : w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w);
@@ -24,12 +71,13 @@ async function loadAll(onProgress) {
   if (index) return;
   if (loading) return loading;
   loading = (async () => {
-    await loadMeta();
+    await refreshSources();
     docs = [];
-    const files = await Promise.all(meta.sources.map(async (s, i) => {
+    const files = await Promise.all(S.map(async (s, i) => {
+      if (s.own) return mine.find((o) => o.id === s.id).chunks;
       const r = await fetch(`wissen/${s.id}.json?v=${encodeURIComponent(meta.built)}`);
       const chunks = await r.json();
-      onProgress?.(`Lade Quellen … ${i + 1}/${meta.sources.length}`);
+      onProgress?.(`Lade Quellen … ${i + 1}/${S.length}`);
       return chunks;
     }));
     files.forEach((chunks, si) => chunks.forEach((c, ci) => docs.push({ s: si, c: ci, h: c.h, t: c.t })));
@@ -119,16 +167,30 @@ export function initWissen(getSettings) {
 
   const showSources = async () => {
     try {
-      await loadMeta();
-      ui.sources.innerHTML = meta.sources.map((s, i) => `<button class="src" data-i="${i}"><b>${esc(s.title)}</b><small>${esc(s.author)} · ${s.n} Abschnitte · ${esc(s.lic)}</small></button>`).join('')
+      await refreshSources();
+      ui.sources.innerHTML = S.map((s, i) => `<div class="srcrow"><button class="src" data-i="${i}"><b>${esc(s.title)}</b><small>${esc(s.author)} · ${s.n} Abschnitte · ${esc(s.lic)}</small></button>${s.own ? `<button class="btn small" data-del="${esc(s.id)}">Löschen</button>` : ''}</div>`).join('')
         || '<p class="note">Noch keine Quellen.</p>';
     } catch (e) { ui.sources.innerHTML = `<p class="note">${esc(e.message)}</p>`; }
   };
+  const importFiles = async (files) => {
+    const st = $('#wq-own-status');
+    for (const f of files) {
+      try {
+        st.textContent = `Lese ${f.name} …`;
+        const chunks = await readFileChunks(f, (m) => { st.textContent = m; });
+        if (chunks.length < 3) { st.textContent = `${f.name}: kein lesbarer Text gefunden (gescanntes PDF?).`; continue; }
+        await ownPut({ id: 'u' + Date.now() + Math.floor(Math.random() * 1000), title: f.name.replace(/\.[^.]+$/, ''), chunks });
+        st.textContent = `${f.name}: ${chunks.length} Abschnitte gespeichert.`;
+      } catch (e) { st.textContent = `${f.name}: ${e.message}`; }
+    }
+    index = null; docs = null;
+    await showSources();
+  };
 
   const passageCard = (d, n) => {
-    const x = docs[d], s = meta.sources[x.s];
+    const x = docs[d], s = S[x.s];
     return `<div class="passage" id="p${n}"><div class="ph"><b>[${n}]</b> ${esc(s.title)} <small>${esc(s.author)}${x.h ? ' · ' + esc(x.h) : ''}</small></div>
-      <div class="pt">${esc(x.t)}</div><button class="btn small" data-read="${x.s}:${x.c}">Im Buch lesen</button> <a class="lic" href="${esc(s.url)}" target="_blank" rel="noopener">Quelle (${esc(s.lic)})</a></div>`;
+      <div class="pt">${esc(x.t)}</div><button class="btn small" data-read="${x.s}:${x.c}">Im Buch lesen</button> ${s.url ? `<a class="lic" href="${esc(s.url)}" target="_blank" rel="noopener">Quelle (${esc(s.lic)})</a>` : `<span class="lic">${esc(s.lic)}</span>`}</div>`;
   };
 
   async function ask() {
@@ -149,7 +211,7 @@ export function initWissen(getSettings) {
       ui.passages.innerHTML = '<h3>Gefundene Stellen</h3>' + hits.map((d, i) => passageCard(d, i + 1)).join('');
       if (!settings.apiKey) { ui.status.textContent = 'Treffer aus den Büchern (für eine Antwort in Worten: Gemini-Key in den Einstellungen).'; return; }
       ui.status.textContent = 'Gemini formuliert die Antwort nur aus diesen Stellen …';
-      const ctx = hits.map((d, i) => `[${i + 1}] (${meta.sources[docs[d].s].title}, ${meta.sources[docs[d].s].author})\n${docs[d].t}`).join('\n\n');
+      const ctx = hits.map((d, i) => `[${i + 1}] (${S[docs[d].s].title}, ${S[docs[d].s].author})\n${docs[d].t}`).join('\n\n');
       const text = await gemini(settings, SYS_ANSWER, `Frage: ${q}\n\nAuszüge:\n${ctx}`, 0.2);
       ui.answer.innerHTML = renderAnswer(text, hits);
       ui.status.textContent = 'Antwort aus den Quellen. Die Nummern führen zur Originalstelle.';
@@ -165,21 +227,24 @@ export function initWissen(getSettings) {
     renderReader(c);
   }
   function renderReader(focus = -1) {
-    const src = meta.sources[cur.s], list = docs.filter((d) => d.s === cur.s);
+    const src = S[cur.s], list = docs.filter((d) => d.s === cur.s);
     const page = list.slice(cur.from, cur.from + 6);
     ui.main.hidden = true; ui.reader.hidden = false;
     ui.reader.innerHTML = `<button class="btn small" id="rd-back">← Zurück</button>
-      <h3>${esc(src.title)}</h3><p class="note">${esc(src.author)} · <a class="lic" href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.lic)}</a> · Abschnitt ${cur.from + 1}–${cur.from + page.length} von ${list.length}</p>
+      <h3>${esc(src.title)}</h3><p class="note">${esc(src.author)} · ${src.url ? `<a class="lic" href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.lic)}</a>` : esc(src.lic)} · Abschnitt ${cur.from + 1}–${cur.from + page.length} von ${list.length}</p>
       ${page.map((d) => `<div class="passage${d.c === focus ? ' focus' : ''}">${d.h ? `<div class="ph"><small>${esc(d.h)}</small></div>` : ''}<div class="pt">${esc(d.t)}</div></div>`).join('')}
       <div class="controls"><button class="btn" id="rd-prev" ${cur.from <= 0 ? 'disabled' : ''}>‹ Zurück</button><button class="btn" id="rd-next" ${cur.from + 6 >= list.length ? 'disabled' : ''}>Weiter ›</button></div>`;
     ui.reader.querySelector('.focus')?.scrollIntoView({ block: 'center' });
     if (focus < 0) root.scrollTop = 0;
   }
 
+  $('#wq-file')?.addEventListener('change', (e) => { importFiles([...e.target.files]); e.target.value = ''; });
   ui.go.addEventListener('click', ask);
   ui.q.addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
   ui.sources.addEventListener('click', (e) => { const b = e.target.closest('.src'); if (b) openReader(+b.dataset.i, 0); });
   root.addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del]');
+    if (del) { ownDel(del.dataset.del).then(() => { index = null; docs = null; showSources(); }); return; }
     const rd = e.target.closest('[data-read]');
     if (rd) { const [s, c] = rd.dataset.read.split(':').map(Number); openReader(s, c); return; }
     const ref = e.target.closest('.ref');
