@@ -364,11 +364,7 @@ function askAfterMistake(rec, fb) {
       { label: 'Besseren Zug zeigen', onClick: showBetter },
       { label: 'Weiterspielen', onClick: cont },
     ];
-    if (settings.apiKey) actions.splice(2, 0, { label: 'Gemini: Tiefenanalyse', onClick: async () => {
-      coach.say('Ich denke kurz nach …', 'think');
-      try { coach.say(cleanAI(await askGemini(settings, moveExplainPrompt(geminiData(rec, fb)))), 'happy', actions); }
-      catch (e) { coach.say('Gemini-Fehler: ' + e.message, 'worry', actions); }
-    } });
+    if (settings.apiKey) actions.splice(2, 0, { label: 'Gemini: Tiefenanalyse', onClick: () => askWithCancel(coach, moveExplainPrompt(geminiData(rec, fb)), actions) });
     coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, actions);
   };
   if (!settings.retryOffer && !G.practice) {
@@ -458,6 +454,17 @@ $('#btn-resign').onclick = () => {
     { label: 'Weiterspielen', onClick: () => coach.say('Gut, weiter geht es!', 'happy') },
   ]);
 };
+
+/* ---------- Gemini-Anfrage mit Abbrechen-Taste und Zeitlimit ---------- */
+async function askWithCancel(c, prompt, back) {
+  const ctl = new AbortController();
+  c.say('Ich frage Gemini … das kann bis zu 40 Sekunden dauern.', 'think', [{ label: 'Abbrechen', onClick: () => ctl.abort() }]);
+  try { c.say(cleanAI(await askGemini(settings, prompt, ctl.signal)), 'happy', back); }
+  catch (e) {
+    if (e.name === 'AbortError') c.say('Abgebrochen. Du kannst weitermachen.', 'neutral', back);
+    else c.say('Gemini-Fehler: ' + e.message, 'worry', back);
+  }
+}
 
 /* ---------- Knöpfe-Seitenleiste bei knappem Platz ---------- */
 function updateCtl() {
@@ -702,9 +709,7 @@ $('#rv-gem').onclick = async () => {
   if (!R || R.idx === 0) return;
   if (!settings.apiKey) { coachReview.say('Dafür brauche ich deinen Gemini-API-Key (Reiter „Mehr“).', 'think'); return; }
   const m = R.moves[R.idx - 1], d = R.data[R.idx - 1];
-  coachReview.say('Ich denke kurz nach …', 'think');
-  try { coachReview.say(cleanAI(await askGemini(settings, moveExplainPrompt(geminiData(m, d)))), 'happy'); }
-  catch (e) { coachReview.say('Gemini-Fehler: ' + e.message, 'worry'); }
+  await askWithCancel(coachReview, moveExplainPrompt(geminiData(m, d)), []);
 };
 $('#rv-gem-all').onclick = async () => {
   if (!R) return;
@@ -712,13 +717,10 @@ $('#rv-gem-all').onclick = async () => {
   const critical = R.moves.map((m, i) => ({ m, d: R.data[i], i })).filter((x) => isCritical(x.i))
     .map((x) => `${Math.floor(x.i / 2) + 1}. ${x.m.san} (${x.d.cls.label}, besser: ${uciToSan(x.m.fenBefore, x.d.bestUci)})`);
   const res = { win: 'Sieg', loss: 'Niederlage', draw: 'Remis' }[R.h.result] || 'unbekannt';
-  coachReview.say('Ich fasse die Partie zusammen …', 'think');
-  try {
-    coachReview.say(cleanAI(await askGemini(settings, gameSummaryPrompt({
-      color: whoName(R.h.userColor), level: LEVELS[R.h.level]?.name, result: res, accuracy: R.accuracy,
-      counts: `Patzer ${R.counts.blunder}, Fehler ${R.counts.mistake}, Ungenauigkeiten ${R.counts.inacc}`, critical,
-    }))), 'happy');
-  } catch (e) { coachReview.say('Gemini-Fehler: ' + e.message, 'worry'); }
+  await askWithCancel(coachReview, gameSummaryPrompt({
+    color: whoName(R.h.userColor), level: LEVELS[R.h.level]?.name, result: res, accuracy: R.accuracy,
+    counts: `Patzer ${R.counts.blunder}, Fehler ${R.counts.mistake}, Ungenauigkeiten ${R.counts.inacc}`, critical,
+  }), []);
 };
 
 /* =====================================================================
