@@ -212,10 +212,10 @@ function flagFall(col) {
 }
 if (!clockTimer) clockTimer = setInterval(clockTick, 200);
 
-function newGame({ color, level }) {
-  const chess = new Chess();
+function newGame({ color, level, fen }) {
+  const chess = new Chess(fen || undefined);
   G = { chess, userColor: color, level, moves: [], over: false, busy: false, hintStep: 0, hint: null, prev: null, takebacks: 0, id: Date.now() };
-  if (settings.tcM > 0) G.clock = { w: settings.tcM * 60000, b: settings.tcM * 60000, inc: settings.tcInc * 1000, run: null, t0: 0 };
+  if (!fen && settings.tcM > 0) G.clock = { w: settings.tcM * 60000, b: settings.tcM * 60000, inc: settings.tcInc * 1000, run: null, t0: 0 };
 }
 
 function renderPlay() {
@@ -232,6 +232,7 @@ function renderPlay() {
   else if (G.busy) s = `${LEVELS[G.level].name} denkt …`;
   else s = `<b>Du bist am Zug</b> (${whoName(G.userColor)})`;
   if (!G.over && G.chess.inCheck()) s += ' – <b>Schach!</b>';
+  if (G.practice) s = 'Übung (ungewertet) · ' + s;
   $('#status').innerHTML = s;
   renderClock();
   // Zugleiste
@@ -296,7 +297,7 @@ async function botTurn() {
   if (await finishIfOver()) return;
   prefetch();
   G.busy = false; renderPlay();
-  if (settings.coachMode !== 'live') { /* stiller Modus: keine Hinweise zum Gegnerzug */ }
+  if (cmode() !== 'live') { /* stiller Modus: keine Hinweise zum Gegnerzug */ }
   else if (!G.over && weakPieces(G.chess, G.userColor).length && !G.chess.inCheck()) {
     coach.say(`Dein Gegner spielt ${mv.san}. Denk nach: Was will er damit? Droht dir etwas?`, 'think');
   } else if (G.chess.inCheck()) {
@@ -315,8 +316,8 @@ async function onUserMove(from, to, promotion) {
   if (G.clock) G.clock.run = null; // Bot-Uhr startet erst, wenn der Bot wirklich dran ist
   renderPlay();
   if (G.chess.isGameOver()) { rec.cls = 'best'; await finishIfOver(); return; }
-  if (settings.coachMode === 'spaeter') { await botTurn(); return; } // stiller Modus: erst nach der Partie analysieren
-  if (settings.coachMode !== 'fehler') coach.say('Mal sehen …', 'think');
+  if (cmode() === 'spaeter') { await botTurn(); return; } // stiller Modus: erst nach der Partie analysieren
+  if (cmode() !== 'fehler') coach.say('Mal sehen …', 'think');
   const prevRes = prevPromise ? await prevPromise : null;
   const fb = await evaluateMove(prevRes, rec);
   if (G.over) return;
@@ -326,7 +327,7 @@ async function onUserMove(from, to, promotion) {
   renderPlay();
   const [mood, eff] = MOOD_FOR[fb.cls.id];
   const id = fb.cls.id;
-  if (settings.coachMode === 'fehler' && (id === 'best' || id === 'good' || id === 'inacc')) { await botTurn(); return; }
+  if (cmode() === 'fehler' && (id === 'best' || id === 'good' || id === 'inacc')) { await botTurn(); return; }
   if (id === 'best' || id === 'good') {
     coach.say(pick(praise(id)), mood, [], eff);
     await sleep(900); await botTurn();
@@ -370,7 +371,7 @@ function askAfterMistake(rec, fb) {
     } });
     coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, actions);
   };
-  if (!settings.retryOffer) {
+  if (!settings.retryOffer && !G.practice) {
     coach.say(`${fb.cls.label}. ${badOpen(fb.cls.id)}${ex.text}`, mood, [], eff);
     sleep(1200).then(cont);
     return;
@@ -380,6 +381,30 @@ function askAfterMistake(rec, fb) {
     { label: 'Erklär mir warum', onClick: explain },
     { label: 'Weiterspielen', onClick: cont },
   ], eff);
+}
+
+const cmode = () => (G && G.practice ? 'live' : settings.coachMode);
+function endButtons() {
+  if (G.practice) return [
+    { label: 'Zurück zur Analyse', primary: true, onClick: () => switchView('review') },
+    { label: 'Nochmal ab hier', onClick: () => startPractice(G.practice) },
+    { label: 'Neue Partie', onClick: openNewDialog },
+  ];
+  return [
+    { label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) },
+    { label: 'Neue Partie', onClick: openNewDialog },
+  ];
+}
+
+// Übungsmodus: ab einer Stellung aus der Analyse weiterspielen – ungewertet, mit Hilfe
+async function startPractice(p) {
+  if (new Chess(p.fen).isGameOver()) { coachReview.say('Hier ist die Partie schon zu Ende. Such dir eine frühere Stellung aus.', 'think'); return; }
+  newGame({ color: p.color, level: R ? R.h.level : settings.level, fen: p.fen });
+  G.practice = p; G.rated = true;
+  switchView('play');
+  coach.say('Übungsmodus: Diese Partie zählt nicht für deine Elo. Ich kommentiere jeden Zug, der Tipp und die Denk-Routine helfen dir, und Fehler darfst du zurücknehmen. Finde den besseren Weg!', 'happy', [], 'nod');
+  renderPlay();
+  if (G.chess.turn() !== p.color) await botTurn(); else { prefetch(); renderPlay(); }
 }
 
 async function finishIfOver() {
@@ -397,16 +422,14 @@ async function finishIfOver() {
   }
   G.result = result;
   if (!G.rated) { G.rated = true; text += '\n' + ratingLine(updateRating(result, LEVELS[G.level].num, G.takebacks)); }
-  coach.say(text, mood, [
-    { label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) },
-    { label: 'Neue Partie', onClick: openNewDialog },
-  ], eff);
+  coach.say(text, mood, endButtons(), eff);
   renderPlay();
   saveGame();
   return true;
 }
 
 function saveGame() {
+  if (G.practice) return null; // Übungspartien werden nicht gespeichert
   const hist = store.get('history', []);
   let item = hist.find((h) => h.id === G.id);
   if (!item) {
@@ -431,7 +454,7 @@ $('#check-close').onclick = () => $('#dlg-check').close();
 $('#btn-resign').onclick = () => {
   if (!G || G.over) return;
   coach.say('Willst du wirklich aufgeben?', 'think', [
-    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; const u = G.rated ? null : updateRating('loss', LEVELS[G.level].num, G.takebacks); G.rated = true; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?' + (u ? '\n' + ratingLine(u) : ''), 'neutral', [{ label: 'Partie analysieren', primary: true, onClick: () => openReview(saveGame()) }, { label: 'Neue Partie', onClick: openNewDialog }]); } },
+    { label: 'Ja, aufgeben', onClick: () => { G.over = true; G.busy = false; G.result = 'loss'; const u = G.rated ? null : updateRating('loss', LEVELS[G.level].num, G.takebacks); G.rated = true; saveGame(); renderPlay(); coach.say('Kein Problem. Schauen wir uns an, wo es kippte?' + (u ? '\n' + ratingLine(u) : ''), 'neutral', endButtons()); } },
     { label: 'Weiterspielen', onClick: () => coach.say('Gut, weiter geht es!', 'happy') },
   ]);
 };
@@ -525,7 +548,7 @@ async function openReview(h) {
   switchView('review');
   $('#review-empty').hidden = true; $('#review-main').hidden = false;
   const { moves } = rebuild(h);
-  R = { h, moves, pos: [], data: [], idx: 0, showBest: false };
+  R = { h, moves, pos: [], data: [], idx: 0, sub: 1 };
   const bar = $('#review-progress'), fill = bar.firstElementChild;
   bar.hidden = false; fill.style.width = '0%';
   coachReview.say('Ich gehe die Partie Zug für Zug durch. Das dauert einen Moment …', 'think');
@@ -539,6 +562,7 @@ async function openReview(h) {
   bar.hidden = true;
   computeReview();
   R.idx = firstCritical(0) ?? moves.length;
+  R.sub = flawedAt(R.idx) ? 0 : 1;
   renderReview();
 }
 
@@ -574,6 +598,8 @@ function computeReview() {
 }
 
 const isCritical = (i) => R.moves[i].by === R.h.userColor && ['mistake', 'blunder'].includes(R.data[i].cls.id);
+const isFlawed = (i) => R.moves[i].by === R.h.userColor && ['inacc', 'mistake', 'blunder'].includes(R.data[i].cls.id);
+const flawedAt = (i) => i >= 1 && isFlawed(i - 1); // i = Anzahl gespielter Halbzüge
 function firstCritical(from) { for (let i = from; i < R.moves.length; i++) if (isCritical(i)) return i + 1; return null; }
 
 function renderReview() {
@@ -581,14 +607,15 @@ function renderReview() {
   const c = new Chess();
   moves.slice(0, idx).forEach((m) => c.move(uciParts(m.uci)));
   const last = idx > 0 ? { from: moves[idx - 1].from, to: moves[idx - 1].to } : null;
-  let hint = null;
-  if (R.showBest && idx > 0 && data[idx - 1].bestUci) {
-    const u = uciParts(data[idx - 1].bestUci);
-    // Pfeil für den besseren Zug gehört in die Stellung VOR dem Zug
-    const cb = new Chess(moves[idx - 1].fenBefore);
-    boardReview.set(cb, { orientation: h.userColor, last: null, interactive: null, hint: { arrow: { from: u.from, to: u.to } }, showLegal: false });
+  const before = idx > 0 && R.sub === 0; // Stellung VOR dem Zug mit Pfeilen zeigen
+  if (before) {
+    const m = moves[idx - 1], d = data[idx - 1];
+    const arrows = [];
+    if (d.bestUci) { const u = uciParts(d.bestUci); arrows.push({ from: u.from, to: u.to, color: '#35c98a' }); }
+    if (d.bestUci !== m.uci) { const pu = uciParts(m.uci); arrows.push({ from: pu.from, to: pu.to, color: '#e5484d' }); }
+    boardReview.set(new Chess(m.fenBefore), { orientation: h.userColor, last: null, interactive: null, hint: { arrows }, showLegal: false });
   } else {
-    boardReview.set(c, { orientation: h.userColor, last, interactive: null, hint, showLegal: false });
+    boardReview.set(c, { orientation: h.userColor, last, interactive: null, hint: null, showLegal: false });
   }
   // Kommentar
   if (idx === 0) coachReview.say('Das ist die Ausgangsstellung. Tippe auf einen Zug unten oder auf „Nächster Fehler“.', 'neutral');
@@ -601,10 +628,13 @@ function renderReview() {
       const ex = explainMove({ fenBefore: m.fenBefore, played: m.uci, bestUci: d.bestUci, replyUci: d.reply, cls: d.cls });
       t += `\n${ex.text}`;
       if (mine && ex.question) t += `\n${ex.question}`;
-      t += `\nBesser: ${uciToSan(m.fenBefore, d.bestUci)}`;
+      t += `\nBesser: ${uciToSan(m.fenBefore, d.bestUci)}${before ? ' (grüner Pfeil; rot = dein Zug)' : ''}`;
+      const bl = R.pos[idx - 1].lines[0];
+      if (mine && bl && bl.mate > 0) t += `\nHier war ein Matt in ${bl.mate} möglich!`;
       if (!mine && ['mistake', 'blunder'].includes(d.cls.id)) { t = `Der Bot patzt hier: ${t}`; mood = 'happy'; }
     } else if (!mine) { mood = 'neutral'; }
-    coachReview.say(t, mine ? mood : (mood === 'wow' ? 'think' : mood));
+    const acts = before && mine && ['mistake', 'blunder'].includes(d.cls.id) ? [{ label: 'Ab hier üben', primary: true, onClick: practiceHere }] : [];
+    coachReview.say(t, mine ? mood : (mood === 'wow' ? 'think' : mood), acts);
   }
   $('#review-summary').innerHTML = `Genauigkeit <b>${R.accuracy}%</b> · Patzer <b>${R.counts.blunder}</b> · Fehler <b>${R.counts.mistake}</b> · Ungenauigkeiten <b>${R.counts.inacc}</b>`;
   drawGraph();
@@ -616,7 +646,9 @@ function renderReview() {
   });
   const box = $('#rv-moves');
   box.innerHTML = ml;
-  box.querySelectorAll('button').forEach((b) => b.onclick = () => { R.idx = +b.dataset.i; R.showBest = false; renderReview(); });
+  box.querySelectorAll('button').forEach((b) => b.onclick = () => go(+b.dataset.i));
+  const cur = box.querySelector('.cur');
+  if (cur) box.scrollLeft = cur.offsetLeft - box.clientWidth / 2 + cur.clientWidth / 2;
 }
 
 function drawGraph() {
@@ -638,15 +670,33 @@ function drawGraph() {
 $('#graph').onclick = (e) => {
   if (!R) return;
   const r = e.currentTarget.getBoundingClientRect();
-  R.idx = Math.round(((e.clientX - r.left) / r.width) * (R.pos.length - 1)); R.showBest = false; renderReview();
+  go(Math.round(((e.clientX - r.left) / r.width) * (R.pos.length - 1)));
 };
-const go = (i) => { if (!R) return; R.idx = Math.max(0, Math.min(R.moves.length, i)); R.showBest = false; renderReview(); };
+const go = (i) => { if (!R) return; R.idx = Math.max(0, Math.min(R.moves.length, i)); R.sub = flawedAt(R.idx) ? 0 : 1; renderReview(); };
+// Schritt vor/zurück: bei eigenen Fehlern erst die Stellung vor dem Zug (mit Pfeilen), dann nach dem Zug
+function step(dir) {
+  if (!R) return;
+  if (dir > 0) {
+    if (R.idx >= R.moves.length && R.sub === 1) return;
+    if (R.idx > 0 && R.sub === 0) R.sub = 1;
+    else { R.idx++; R.sub = flawedAt(R.idx) ? 0 : 1; }
+  } else if (R.idx > 0 && R.sub === 1 && flawedAt(R.idx)) R.sub = 0;
+  else if (R.idx > 0) { R.idx--; R.sub = 1; }
+  renderReview();
+}
+function practiceHere() {
+  if (!R) return;
+  const m = R.idx > 0 ? R.moves[R.idx - 1] : null;
+  const fen = !m ? new Chess().fen() : (R.sub === 0 ? m.fenBefore : m.fenAfter);
+  startPractice({ fen, color: R.h.userColor });
+}
 $('#rv-first').onclick = () => go(0);
-$('#rv-prev').onclick = () => go(R.idx - 1);
-$('#rv-next').onclick = () => go(R.idx + 1);
+$('#rv-prev').onclick = () => step(-1);
+$('#rv-next').onclick = () => step(1);
+$('#rv-practice').onclick = practiceHere;
 $('#rv-last').onclick = () => go(R.moves.length);
 $('#rv-crit').onclick = () => { const n = firstCritical(R.idx) ?? firstCritical(0); if (n) go(n); else coachReview.say('Du hast keine Fehler oder Patzer gemacht – stark!', 'happy', [], 'bounce'); };
-$('#rv-best').onclick = () => { if (!R || R.idx === 0) return; R.showBest = !R.showBest; renderReview(); };
+$('#rv-best').onclick = () => { if (!R || R.idx === 0) return; R.sub = R.sub === 0 ? 1 : 0; renderReview(); };
 $('#rv-back').onclick = () => { $('#review-main').hidden = true; $('#review-empty').hidden = false; renderHistory(); };
 $('#rv-gem').onclick = async () => {
   if (!R || R.idx === 0) return;
