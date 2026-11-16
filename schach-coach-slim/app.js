@@ -436,6 +436,27 @@ $('#btn-resign').onclick = () => {
   ]);
 };
 
+/* ---------- Knöpfe-Seitenleiste bei knappem Platz ---------- */
+function updateCtl() {
+  const pip = document.body.dataset.layout === 'pip';
+  const pipH = pip ? (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pip-h')) || 26) : 0;
+  const avail = window.innerHeight * (1 - pipH / 100);
+  const mode = pip && avail - 300 < window.innerWidth * 0.95 ? 'drawer' : 'bar';
+  if (document.body.dataset.ctl !== mode) document.body.dataset.ctl = mode;
+  if (mode === 'bar') setCtl(false);
+}
+function setCtl(open) {
+  $('.controls').classList.toggle('open', open);
+  $('#ctl-tab').textContent = open ? '›' : '‹';
+}
+$('#ctl-tab').onclick = () => setCtl(!$('.controls').classList.contains('open'));
+$('.controls').addEventListener('click', (e) => { if (e.target.closest('.btn')) setCtl(false); });
+$('#board').addEventListener('pointerdown', () => setCtl(false));
+window.addEventListener('resize', updateCtl);
+document.addEventListener('pipchange', updateCtl);
+setInterval(updateCtl, 800);
+updateCtl();
+
 /* ---------- Neue-Partie-Dialog ---------- */
 const dlgNew = $('#dlg-new');
 function openNewDialog() {
