@@ -46,6 +46,7 @@
     <div id="review-empty" class="empty">
       <h2>Analyse</h2>
       <p>Spiele eine Partie gegen einen Bot und lass sie danach analysieren. Hier siehst du dann jeden Zug bewertet und kannst die wichtigsten Momente nachspielen.</p>
+      <div id="rating-box" class="rating-box"></div>
       <div id="history"></div>
     </div>
     <div id="review-main" hidden>
@@ -92,6 +93,10 @@
   <section id="view-settings" class="view">
     <div id="look-box"></div>
     <h2>Einstellungen</h2>
+    <label class="field">Ton des Coachs
+      <select id="set-tone"></select>
+    </label>
+    <button class="btn" id="set-rating-reset">Elo-Schätzung zurücksetzen</button>
     <label class="field">Gemini-API-Key (optional, für Tiefenanalyse)
       <input id="set-key" type="password" autocomplete="off" placeholder="AIza…">
     </label>
@@ -127,6 +132,7 @@
     <div class="elo-val"><b id="elo-num">400</b> Elo<small id="elo-name"></small></div>
     <input type="range" id="elo-range" min="200" max="3000" step="50" value="400">
     <div class="elo-marks"><span>200</span><span>1000</span><span>2000</span><span>3000</span></div>
+    <p class="note" id="elo-mine"></p>
     <p class="note">Elo-Werte sind eine grobe Stockfish-Skala. Gegen Menschen fühlt sich dieselbe Zahl oft anders an.</p>
   </div>
   <div class="dlg-actions">
