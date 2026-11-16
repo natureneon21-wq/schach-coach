@@ -53,6 +53,12 @@
       <h2>Analyse</h2>
       <p>Spiele eine Partie gegen einen Bot und lass sie danach analysieren. Hier siehst du dann jeden Zug bewertet und kannst die wichtigsten Momente nachspielen.</p>
       <div id="rating-box" class="rating-box"></div>
+      <div id="hist-tools" hidden>
+        <input id="hist-q" type="search" placeholder="Suchen: Bot, Datum, Sieg, Schwarz …" autocomplete="off">
+        <div class="seg" id="hist-filter">
+          <button data-f="all" class="on">Alle</button><button data-f="win">Siege</button><button data-f="loss">Niederlagen</button><button data-f="draw">Remis</button>
+        </div>
+      </div>
       <div id="history"></div>
     </div>
     <div id="review-main" hidden>
