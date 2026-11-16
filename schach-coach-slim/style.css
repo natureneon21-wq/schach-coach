@@ -281,3 +281,46 @@ body[data-layout=pip][data-pip-pos=bottom] dialog { margin-top: 8px; margin-bott
 
 #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(10px); background: #000c; color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+
+/* ===== PC / großer Bildschirm: ganze Fläche nutzen (Brett links, Coach und Knöpfe rechts, Reiter als Seitenleiste) ===== */
+@media (min-width: 900px) and (min-height: 520px) and (pointer: fine) {
+  body #app { max-width: none; width: 100%; display: grid; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  body #tabs { grid-column: 1; grid-row: 1; flex-direction: column; justify-content: flex-start; gap: 4px; padding: 14px 6px; border-top: 0; border-right: 1px solid #0003; }
+  body #tabs button { flex: none; padding: 12px 0; font-size: 13px; border-radius: 12px; }
+  body #tabs button:hover { background: var(--panel2); }
+  body #tabs button span { font-size: 24px; }
+  body #app > .view { grid-column: 2; grid-row: 1; padding: 18px 28px; }
+  body .ctl-tab { display: none !important; }
+  body .bubble { font-size: 16px; }
+  body .avatar { flex-basis: 96px; width: 96px; height: 96px; }
+  body .btn { padding: 13px 14px; font-size: 15px; }
+  body .btn:hover { filter: brightness(1.15); }
+
+  /* Spielen und Aufgaben: zwei Spalten */
+  body #view-play.active, body #view-train.active { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 32vw, 460px); column-gap: 28px; row-gap: 12px; align-content: stretch; }
+  body #view-play.active { grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+  body #view-train.active { grid-template-rows: auto auto auto 1fr; }
+  body #view-play > .board-wrap, body #view-train > .board-wrap { grid-column: 1; grid-row: 1 / -1; width: 100%; margin: 0; min-height: 0; container-type: size; display: grid; place-items: center; }
+  body #view-play .board, body #view-train .board { width: min(100cqw, 100cqh); margin: 0; }
+  body #view-play > :not(.board-wrap), body #view-train > :not(.board-wrap) { grid-column: 2; }
+  body #coach-play { grid-row: 1; } body #clocks { grid-row: 2; } body #status { grid-row: 3; } body #movestrip { grid-row: 4; } body #view-play > .controls { grid-row: 5; }
+  body #coach-train { grid-row: 1; } body #train-info { grid-row: 2; } body #view-train > .controls { grid-row: 3; } body #view-train > .note { grid-row: 4; align-self: start; }
+  body .movestrip, body .movelist { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; white-space: normal; align-content: flex-start; font-size: 14px; }
+  body #movestrip { min-height: 0; }
+
+  /* Analyse */
+  body #review-main:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 32vw, 460px); grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto; column-gap: 28px; row-gap: 10px; }
+  body #view-review .board-wrap { grid-column: 1; grid-row: 1 / -1; width: 100%; display: grid; place-items: center; }
+  body #view-review .board { margin: 0; }
+  body #review-main > :not(.board-wrap) { grid-column: 2; }
+  body #coach-review { grid-row: 1; } body #review-progress { grid-row: 2; } body .rv-top { grid-row: 3; } body #graph { grid-row: 4; height: 70px; } body #rv-moves { grid-row: 5; min-height: 0; }
+  body #review-main > .controls:nth-last-child(2) { grid-row: 6; } body #review-main > .controls:last-child { grid-row: 7; }
+  body #view-review .bubble { height: 9.5em; }
+  body #view-review .controls .btn { padding: 11px 6px; font-size: 14px; }
+  body #review-empty { width: min(100%, 820px); align-self: center; }
+
+  /* Wissen, Einstellungen: nicht zu breit */
+  body #view-wissen > *, body #view-settings > * { width: min(100%, 860px); align-self: center; }
+  body dialog { width: min(92vw, 520px); }
+  body #toast { bottom: 28px; }
+}
