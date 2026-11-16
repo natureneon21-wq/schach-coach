@@ -121,6 +121,12 @@ dialog::backdrop { background: #000a; }
 .movelist .num { color: var(--muted); padding: 5px 2px; }
 .hist { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
 .hist small { color: var(--muted); display: block; margin-top: 2px; }
+#hist-tools { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+#hist-q { width: 100%; box-sizing: border-box; background: var(--panel2); color: var(--text); border: 2px solid transparent; border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+#hist-q:focus { outline: none; border-color: var(--accent); }
+#hist-filter button { text-align: center; padding: 8px 4px; font-size: 13px; }
+.hist-group { color: var(--muted); font-size: 13px; font-weight: 600; margin: 14px 2px 6px; display: flex; justify-content: space-between; }
+.hist-more { width: 100%; margin: 4px 0 10px; }
 
 /* ---- Figuren-Sets (SVG) ---- */
 .pcs { width: 86%; height: 86%; display: flex; align-items: center; justify-content: center; font-size: inherit; -webkit-text-stroke: 0; filter: none; }
