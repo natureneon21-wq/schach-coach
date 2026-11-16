@@ -201,3 +201,15 @@ body[data-layout=pip] .view { gap: 5px; padding-top: 4px; }
 .rating-box { background: var(--panel); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .rating-box b { font-size: 17px; } .rating-box small { color: var(--muted); font-size: 12px; line-height: 1.4; } .rating-box svg { width: 100%; height: 44px; margin-top: 4px; }
 .field select { background: var(--panel); border: 1px solid #fff2; border-radius: 10px; padding: 11px; color: var(--text); font-size: 15px; }
+
+/* Schachuhr */
+.clocks { display: flex; gap: 8px; justify-content: center; width: min(100%, 62dvh); margin: 0 auto; }
+.clk { flex: 1; display: flex; justify-content: space-between; align-items: center; background: var(--panel2); border: 2px solid transparent; border-radius: 10px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
+.clk b { font-size: 20px; font-variant-numeric: tabular-nums; color: var(--text); }
+.clk.run { border-color: var(--accent); }
+.clk.low b { color: #ff6b6b; }
+.seg.tcs { flex-wrap: wrap; } .seg.tcs button { flex: 1 1 30%; padding: 8px 4px; font-size: 13px; }
+.tc-custom { display: flex; gap: 10px; margin-top: 8px; }
+.tc-custom label { flex: 1; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.tc-custom input { background: var(--panel2); color: var(--text); border: 2px solid transparent; border-radius: 8px; padding: 8px; font-size: 15px; width: 100%; box-sizing: border-box; }
+body[data-layout=pip].has-clock .board-wrap { width: min(100%, max(200px, calc(100dvh - var(--pip-h) - 380px))); }
