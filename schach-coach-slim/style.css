@@ -62,7 +62,7 @@ h2 { margin: 6px 0; font-size: 20px; }
 .sq.dot::after { content: ""; position: absolute; width: 3.6cqw; height: 3.6cqw; border-radius: 50%; background: rgba(20, 30, 20, .32); }
 .sq.cap::after { content: ""; position: absolute; inset: .6cqw; border-radius: 50%; box-shadow: inset 0 0 0 1cqw rgba(20, 30, 20, .32); }
 .sq i { position: absolute; font-size: 2.6cqw; font-style: normal; font-weight: 700; opacity: .75; pointer-events: none; }
-.sq.light i { color: #5f7a62; } .sq.dark i { color: #e8dcc4; }
+.sq.light i { color: var(--dark); } .sq.dark i { color: var(--light); }
 .sq .rk { top: .5cqw; left: .7cqw; } .sq .fl { bottom: .3cqw; right: .8cqw; }
 .pc { position: relative; z-index: 1; font-size: 10.6cqw; line-height: 1; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", sans-serif; pointer-events: none; font-weight: 400; }
 .pc.w { color: #fff; -webkit-text-stroke: .5cqw #1a1a1a; paint-order: stroke fill; }
@@ -71,7 +71,7 @@ h2 { margin: 6px 0; font-size: 20px; }
 @keyframes pop { from { transform: scale(.7); } to { transform: scale(1); } }
 .arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
 .promo { position: absolute; z-index: 5; left: 12.5%; right: 12.5%; top: 37.5%; height: 25%; background: #f4f4f8ee; border-radius: 10px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 20px #000a; }
-.promo button { background: #6f8f72; border: 0; border-radius: 8px; width: 22%; aspect-ratio: 1; font-size: 11cqw; cursor: pointer; padding: 0; }
+.promo button { background: var(--dark); border: 0; border-radius: 8px; width: 22%; aspect-ratio: 1; font-size: 11cqw; cursor: pointer; padding: 0; }
 .promo .pc { pointer-events: none; font-size: inherit; }
 
 .status { font-size: 14px; color: var(--muted); min-height: 20px; text-align: center; }
@@ -120,3 +120,57 @@ dialog::backdrop { background: #000a; }
 .movelist .num { color: var(--muted); padding: 5px 2px; }
 .hist { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
 .hist small { color: var(--muted); display: block; margin-top: 2px; }
+
+/* ---- Figuren-Sets (SVG) ---- */
+.pcs { width: 86%; height: 86%; display: flex; align-items: center; justify-content: center; font-size: inherit; -webkit-text-stroke: 0; filter: none; }
+.pcs svg { width: 100%; height: 100%; overflow: visible; }
+.pcs.w { --pf: var(--pw); --po: var(--pwo); } .pcs.b { --pf: var(--pb); --po: var(--pbo); }
+.pcs svg path, .pcs svg circle, .pcs svg rect { fill: var(--pf); stroke: var(--po); stroke-width: 1.5; stroke-linejoin: round; }
+.pcs svg .d { fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.pcs svg .e { fill: var(--po); stroke: none; }
+.pcs.set-kontur svg path, .pcs.set-kontur svg circle, .pcs.set-kontur svg rect { fill-opacity: .2; stroke-width: 2.4; }
+.pcs.set-kontur svg .e { fill-opacity: 1; }
+.pcs.set-kontur { filter: drop-shadow(0 0 .5cqw var(--pf)); }
+.pcs svg .disc { stroke-width: 2.4; }
+.pcs svg .ltr { fill: var(--po); stroke: none; font: 800 24px system-ui, sans-serif; }
+.pcs svg .sym { fill: var(--po); stroke: none; font: 400 26px "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", sans-serif; }
+.pcs.pop { animation: pop .22s ease-out; }
+
+/* ---- Einstellungen: Aussehen ---- */
+.grid-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.grid-pick button { background: var(--panel2); color: var(--text); border: 2px solid transparent; border-radius: 10px; padding: 6px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.grid-pick button.on { border-color: var(--accent); background: #2b3a63; }
+.grid-pick small { font-size: 11px; color: var(--muted); text-align: center; }
+.sw { display: flex; width: 54px; height: 26px; border-radius: 6px; overflow: hidden; } .sw i { flex: 1; }
+.pv { display: flex; gap: 2px; } .pvb { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: var(--dark); border-radius: 4px; }
+.pvb .pc { font-size: 24px; } .pvb .pcs { width: 88%; height: 88%; }
+.av { width: 52px; height: 52px; display: block; } .av svg { width: 100%; height: 100%; }
+.av .mira .head, .av .mira .eyes { animation: none; }
+.lbl small { color: var(--muted); }
+
+/* ---- Elo-Regler ---- */
+.elo-box { background: var(--panel2); border-radius: 12px; padding: 12px; }
+.elo-val { font-size: 18px; } .elo-val b { font-size: 34px; }
+.elo-val small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; min-height: 17px; }
+#elo-range { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); height: 28px; }
+.elo-marks { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+
+/* ---- Bild-im-Bild: Platz für das schwebende Video freihalten ---- */
+body[data-layout=pip] #app { height: calc(100dvh - var(--pip-h)); }
+body[data-layout=pip][data-pip-pos=top] #app { margin-top: var(--pip-h); }
+body[data-layout=pip]::after { content: "Hier das Video-Fenster platzieren"; position: fixed; left: 8px; right: 8px; height: calc(var(--pip-h) - 16px); margin: 8px 0; border: 2px dashed #ffffff26; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ffffff4d; font-size: 13px; pointer-events: none; z-index: 0; }
+body[data-layout=pip][data-pip-pos=top]::after { top: 0; }
+body[data-layout=pip][data-pip-pos=bottom]::after { bottom: 0; }
+body[data-layout=pip] .board-wrap { width: min(100%, calc((100dvh - var(--pip-h)) * .58)); }
+body[data-layout=pip] .avatar, body[data-layout=pip] .avatar svg { flex-basis: 54px; width: 54px; height: 54px; }
+body[data-layout=pip] .bubble { min-height: 54px; font-size: 13.5px; padding: 6px 10px; }
+body[data-layout=pip] .btn { padding: 8px 8px; font-size: 13px; }
+body[data-layout=pip] .view { gap: 5px; padding-top: 4px; }
+
+/* niedrige Fenster (Splitscreen): kompakter */
+@media (max-height: 640px) {
+  .avatar, .avatar svg { flex-basis: 54px; width: 54px; height: 54px; }
+  .bubble { min-height: 54px; font-size: 13.5px; padding: 6px 10px; }
+  .btn { padding: 8px 8px; font-size: 13px; }
+  .board-wrap { width: min(100%, 52dvh); }
+}
