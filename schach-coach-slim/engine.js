@@ -42,7 +42,7 @@ export class Engine {
   send(cmd) { this.worker.postMessage(cmd); }
 
   /** Analysiert eine Stellung. Liefert {lines:[{multipv,score,mate,depth,pv:[uci]}], best}. */
-  analyze(fen, { movetime = 500, depth = 0, multipv = 1 } = {}) {
+  analyze(fen, { movetime = 500, depth = 0, multipv = 1, elo = 0 } = {}) {
     const job = () => this.init().then(() => new Promise((resolve) => {
       const lines = new Map();
       this.cur = (l) => {
@@ -62,6 +62,9 @@ export class Engine {
           resolve({ lines: arr, best: l.split(' ')[1] });
         }
       };
+      // Stärke begrenzen nur für Bot-Züge (elo > 0); Analyse läuft immer mit voller Stärke
+      this.send('setoption name UCI_LimitStrength value ' + (elo ? 'true' : 'false'));
+      if (elo) this.send('setoption name UCI_Elo value ' + Math.max(1320, Math.min(3190, elo)));
       this.send('setoption name MultiPV value ' + multipv);
       this.send('position fen ' + fen);
       this.send(depth ? 'go depth ' + depth : 'go movetime ' + movetime);
