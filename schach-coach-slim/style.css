@@ -263,7 +263,11 @@ body[data-layout=pip][data-pip-pos=bottom] dialog { margin-top: 8px; margin-bott
 #review-main[hidden] { display: none; }
 #view-review .board-wrap { flex: 1 1 0; min-height: 0; width: 100%; container-type: size; }
 #view-review .board { width: min(100cqw, 100cqh); margin: 0 auto; }
-#view-review .bubble-text { max-height: 8.6em; overflow-y: auto; }
+#view-review .bubble { flex: none; min-height: 0; height: 7.4em; justify-content: flex-start; overflow: hidden; }
+#view-review .bubble-text { flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#view-review .bubble-actions { display: none; }
+#view-review .board-wrap { min-height: 200px; }
+#review-main { overflow-y: auto; }
 #view-review .controls .btn { padding: 9px 4px; font-size: 13px; }
 .rv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .rv-top .status { flex: 1; text-align: left; }
