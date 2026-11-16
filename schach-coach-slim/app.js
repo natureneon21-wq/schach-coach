@@ -188,6 +188,7 @@ function renderClock() {
   for (const [id, col] of [['#clk-op', op], ['#clk-me', me]]) {
     const el = $(id), ms = clockLeft(col);
     el.querySelector('b').textContent = fmtClock(ms);
+    el.querySelector('span').textContent = G.twoPlayer ? whoName(col) : (col === me ? 'Du' : 'Gegner');
     el.classList.toggle('run', !G.over && G.clock.run === col);
     el.classList.toggle('low', ms < 20000);
   }
@@ -211,6 +212,12 @@ function clockTick() {
 function flagFall(col) {
   if (G.over) return;
   G.over = true; G.busy = false; G.clock[col] = 0; G.hint = null;
+  if (G.twoPlayer) {
+    G.result = col === 'w' ? 'loss' : 'win';
+    coach.say(`${whoName(col)} hat keine Zeit mehr. ${whoName(col === 'w' ? 'b' : 'w')} gewinnt auf Zeit!`, 'happy', endButtons(), 'bounce');
+    renderPlay(); saveGame(); renderClock();
+    return;
+  }
   const mine = col === G.userColor;
   const result = mine ? 'loss' : 'win';
   G.result = result;
@@ -235,13 +242,14 @@ function renderPlay() {
   const last = G.moves.length ? G.moves[G.moves.length - 1] : null;
   board.set(G.chess, {
     orientation: G.userColor, last: last ? { from: last.from, to: last.to } : null,
-    interactive: !G.busy && !G.over ? G.userColor : null, hint: G.hint, showLegal: settings.showLegal,
+    interactive: !G.busy && !G.over ? (G.twoPlayer ? 'both' : G.userColor) : null, hint: G.hint, showLegal: settings.showLegal,
   });
   // Statuszeile
   let s;
   if (G.over) s = '<b>Partie beendet</b>';
   else if (G.awaiting) s = '<b>Dein Zug wurde bewertet</b> – wie geht es weiter?';
   else if (G.busy) s = `${LEVELS[G.level].name} denkt …`;
+  else if (G.twoPlayer) s = `<b>${whoName(G.chess.turn())} ist am Zug</b>`;
   else s = `<b>Du bist am Zug</b> (${whoName(G.userColor)})`;
   if (!G.over && G.chess.inCheck()) s += ' – <b>Schach!</b>';
   if (G.practice) s = 'Übung (ungewertet) · ' + s;
@@ -252,15 +260,17 @@ function renderPlay() {
   G.moves.forEach((m, i) => {
     if (m.by === 'w') h += `<span class="num">${Math.floor(i / 2) + 1}.</span>`;
     else if (i === 0) h += `<span class="num">1…</span>`;
-    const cls = m.cls && m.by === G.userColor ? CLASSES[m.cls] : null;
+    const cls = !G.twoPlayer && m.cls && m.by === G.userColor ? CLASSES[m.cls] : null;
     h += `<span>${m.san}${cls ? `<b class="mk" style="color:${cls.color}">${cls.sym}</b>` : ''}</span>`;
   });
   const strip = $('#movestrip');
   strip.innerHTML = h;
   strip.scrollLeft = strip.scrollWidth;
+  for (const id of ['#btn-hint', '#btn-check', '#btn-resign']) $(id).hidden = !!G.twoPlayer;
 }
 
 function prefetch() {
+  if (G.twoPlayer) return;
   G.prev = ana(G.chess.fen(), { movetime: 700, multipv: 3 });
 }
 
@@ -273,6 +283,14 @@ async function startGame(opts) {
   renderPlay();
   clockStart('w');
   if (color === 'b') await botTurn(); else { prefetch(); renderPlay(); }
+}
+
+function startTwoPlayer() {
+  newGame({ color: 'w', level: settings.level });
+  G.twoPlayer = true; G.rated = true;
+  coach.say('Zwei Spieler an einem Gerät: Weiß beginnt, danach wechselt ihr euch ab. Tipps sind aus und es gibt keine Elo-Wertung. Nach der Partie kannst du sie in der Analyse mit mir durchgehen. Viel Spaß!', 'happy', [], 'nod');
+  renderPlay();
+  clockStart('w');
 }
 
 async function botChoose() {
@@ -319,6 +337,17 @@ async function botTurn() {
 
 async function onUserMove(from, to, promotion) {
   if (!G || G.busy || G.over) return;
+  if (G.twoPlayer) {
+    const by = G.chess.turn();
+    const mv2 = G.chess.move({ from, to, promotion });
+    G.moves.push(recFrom(mv2));
+    G.hint = null;
+    clockMove(by);
+    renderPlay();
+    if (await finishIfOver()) return;
+    if (G.chess.inCheck()) coach.say('Schach!', 'think');
+    return;
+  }
   G.busy = true; G.hint = null; G.hintStep = 0;
   const prevPromise = G.prev;
   const mv = G.chess.move({ from, to, promotion });
@@ -421,6 +450,14 @@ async function finishIfOver() {
   if (!c.isGameOver()) return false;
   G.over = true; G.busy = false;
   let result, text, mood = 'neutral', eff = null;
+  if (G.twoPlayer) {
+    if (c.isCheckmate()) { const w = c.turn() === 'w' ? 'b' : 'w'; result = w === 'w' ? 'win' : 'loss'; text = `Schachmatt! ${whoName(w)} gewinnt. Gut gespielt von euch beiden!`; mood = 'happy'; eff = 'bounce'; }
+    else { result = 'draw'; text = (c.isStalemate() ? 'Patt. ' : '') + 'Remis – unentschieden.'; }
+    G.result = result;
+    coach.say(text + '\nIn der Analyse sehen wir uns die Partie zusammen an.', mood, endButtons(), eff);
+    renderPlay(); saveGame();
+    return true;
+  }
   if (c.isCheckmate()) {
     const winner = c.turn() === 'w' ? 'b' : 'w';
     if (winner === G.userColor) { result = 'win'; text = TN().end.win; mood = 'happy'; eff = 'bounce'; }
@@ -443,6 +480,7 @@ function saveGame() {
   let item = hist.find((h) => h.id === G.id);
   if (!item) {
     item = { id: G.id, date: Date.now(), userColor: G.userColor, level: G.level, result: G.result || 'abandoned', ucis: G.moves.map((m) => m.uci), takebacks: G.takebacks };
+    if (G.twoPlayer) item.mode = '2p';
     hist.unshift(item);
   } else { item.result = G.result || item.result; item.ucis = G.moves.map((m) => m.uci); }
   store.set('history', hist.slice(0, 1000));
@@ -523,12 +561,21 @@ function openNewDialog() {
   cm.oninput = custom; ci.oninput = custom;
   const sc = $('#seg-color');
   sc.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === settings.color); b.onclick = () => { settings.color = b.dataset.v; sc.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; });
+  const nl = $('#new-legal'); nl.checked = settings.showLegal; nl.onchange = () => { settings.showLegal = nl.checked; saveSettings(); if (G) renderPlay(); };
+  const sm = $('#seg-mode');
+  const applyMode = () => {
+    const tp = settings.mode === '2p';
+    sm.querySelectorAll('button').forEach((x) => x.classList.toggle('on', (x.dataset.v === '2p') === tp));
+    $('#new-bot-color').hidden = tp; $('#new-bot-opp').hidden = tp;
+  };
+  sm.querySelectorAll('button').forEach((b) => { b.onclick = () => { settings.mode = b.dataset.v; applyMode(); }; });
+  applyMode();
   switchView('play');
   dlgNew.showModal();
 }
 $('#btn-new').onclick = openNewDialog;
 $('#new-cancel').onclick = () => dlgNew.close();
-$('#new-start').onclick = () => { saveSettings(); dlgNew.close(); startGame({ color: settings.color, level: settings.level }); };
+$('#new-start').onclick = () => { saveSettings(); dlgNew.close(); if (settings.mode === '2p') startTwoPlayer(); else startGame({ color: settings.color, level: settings.level }); };
 
 /* =====================================================================
    ANALYSE (Review)
@@ -547,13 +594,16 @@ function rebuild(h) {
 
 const HF = { q: '', f: 'all', n: 50 };
 const HRES = { win: 'Sieg', loss: 'Niederlage', draw: 'Remis', abandoned: 'Abgebrochen' };
+const resText = (h) => (h.mode === '2p' ? { win: 'Weiß gewinnt', loss: 'Schwarz gewinnt', draw: 'Remis', abandoned: 'Abgebrochen' }[h.result] : HRES[h.result]) || '?';
+const vsText = (h) => (h.mode === '2p' ? '2 Spieler' : 'gegen ' + (LEVELS[h.level]?.name || 'Bot'));
+const own = (h, by) => h.mode === '2p' || by === h.userColor;
 function renderHistory() {
   const hist = store.get('history', []);
   const el = $('#history');
   $('#hist-tools').hidden = hist.length < 6;
   if (!hist.length) { el.innerHTML = '<p class="note">Noch keine Partien gespeichert.</p>'; return; }
   const q = HF.q.trim().toLowerCase();
-  const text = (h) => `${HRES[h.result] || ''} ${LEVELS[h.level]?.name || 'Bot'} ${whoName(h.userColor)} ${new Date(h.date).toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'short' })} ${new Date(h.date).toLocaleDateString('de-DE')}`.toLowerCase();
+  const text = (h) => `${resText(h)} ${h.mode === '2p' ? '2 spieler zweispieler' : (LEVELS[h.level]?.name || 'Bot') + ' ' + whoName(h.userColor)} ${new Date(h.date).toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'short' })} ${new Date(h.date).toLocaleDateString('de-DE')}`.toLowerCase();
   const list = hist.filter((h) => (HF.f === 'all' || h.result === HF.f) && (!q || q.split(/\s+/).every((w) => text(h).includes(w))));
   if (!list.length) { el.innerHTML = '<p class="note">Keine Partie passt zu Suche und Filter.</p>'; return; }
   const shown = list.slice(0, HF.n);
@@ -563,7 +613,7 @@ function renderHistory() {
   for (const h of shown) {
     const m = new Date(h.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     if (m !== last) { last = m; html += `<div class="hist-group"><span>${m}</span></div>`; }
-    html += `<div class="hist" data-id="${h.id}"><div><b>${HRES[h.result] || '?'}</b> gegen ${LEVELS[h.level]?.name || 'Bot'}<small>${new Date(h.date).toLocaleString('de-DE')} · ${h.ucis.length} Halbzüge · ${whoName(h.userColor)}</small></div><span>›</span></div>`;
+    html += `<div class="hist" data-id="${h.id}"><div><b>${resText(h)}</b> ${vsText(h)}<small>${new Date(h.date).toLocaleString('de-DE')} · ${h.ucis.length} Halbzüge${h.mode === '2p' ? '' : ' · ' + whoName(h.userColor)}</small></div><span>›</span></div>`;
   }
   html += `<p class="note" style="text-align:center">${shown.length} von ${list.length} Partien${list.length < hist.length ? ` (gesamt ${hist.length})` : ''}</p>`;
   if (list.length > shown.length) html += '<button class="btn hist-more" id="hist-more">Weitere 50 anzeigen</button>';
@@ -630,22 +680,22 @@ function computeReview() {
     };
   });
   // Statistik für den Spieler
-  const mine = moves.map((m, i) => ({ m, d: R.data[i] })).filter((x) => x.m.by === h.userColor);
+  const mine = moves.map((m, i) => ({ m, d: R.data[i] })).filter((x) => own(h, x.m.by));
   R.accuracy = mine.length ? Math.round(mine.reduce((a, x) => a + x.d.accuracy, 0) / mine.length) : 0;
   R.counts = { best: 0, good: 0, inacc: 0, mistake: 0, blunder: 0 };
   mine.forEach((x) => R.counts[x.d.cls.id]++);
   // Aufgaben aus eigenen Fehlern speichern
   const mistakes = store.get('mistakes', []);
   for (const x of mine) {
-    if ((x.d.cls.id === 'mistake' || x.d.cls.id === 'blunder') && x.d.bestUci && !mistakes.some((t) => t.fen === x.m.fenBefore)) {
+    if (h.mode !== '2p' && (x.d.cls.id === 'mistake' || x.d.cls.id === 'blunder') && x.d.bestUci && !mistakes.some((t) => t.fen === x.m.fenBefore)) {
       mistakes.unshift({ fen: x.m.fenBefore, best: x.d.bestUci, played: x.m.uci, cls: x.d.cls.id, date: Date.now() });
     }
   }
   store.set('mistakes', mistakes.slice(0, 100));
 }
 
-const isCritical = (i) => R.moves[i].by === R.h.userColor && ['mistake', 'blunder'].includes(R.data[i].cls.id);
-const isFlawed = (i) => R.moves[i].by === R.h.userColor && ['inacc', 'mistake', 'blunder'].includes(R.data[i].cls.id);
+const isCritical = (i) => own(R.h, R.moves[i].by) && ['mistake', 'blunder'].includes(R.data[i].cls.id);
+const isFlawed = (i) => own(R.h, R.moves[i].by) && ['inacc', 'mistake', 'blunder'].includes(R.data[i].cls.id);
 const flawedAt = (i) => i >= 1 && isFlawed(i - 1); // i = Anzahl gespielter Halbzüge
 function firstCritical(from) { for (let i = from; i < R.moves.length; i++) if (isCritical(i)) return i + 1; return null; }
 
@@ -669,7 +719,7 @@ function renderReview() {
   if (idx === 0) coachReview.say('Das ist die Ausgangsstellung. Tippe auf einen Zug unten oder auf „Nächster Fehler“.', 'neutral');
   else {
     const m = moves[idx - 1], d = data[idx - 1];
-    const mine = m.by === h.userColor;
+    const mine = own(h, m.by);
     let t = `${Math.ceil(idx / 2)}${m.by === 'w' ? '.' : '…'} ${m.san} – ${d.cls.label} ${d.cls.sym}`;
     let mood = MOOD_FOR[d.cls.id][0];
     if (['mistake', 'blunder', 'inacc'].includes(d.cls.id)) {
@@ -710,7 +760,7 @@ function drawGraph() {
   });
   const poly = pts.map((p) => p.join(',')).join(' ');
   const cur = pts[R.idx];
-  const dots = R.moves.map((m, i) => (['mistake', 'blunder'].includes(R.data[i].cls.id) && m.by === R.h.userColor) ? `<circle cx="${pts[i + 1][0]}" cy="${pts[i + 1][1]}" r="2.2" fill="${R.data[i].cls.color}"/>` : '').join('');
+  const dots = R.moves.map((m, i) => (['mistake', 'blunder'].includes(R.data[i].cls.id) && own(R.h, m.by)) ? `<circle cx="${pts[i + 1][0]}" cy="${pts[i + 1][1]}" r="2.2" fill="${R.data[i].cls.color}"/>` : '').join('');
   $('#graph').innerHTML = `<rect x="0" y="0" width="300" height="25" fill="#fff" opacity=".07"/><line x1="0" y1="25" x2="300" y2="25" stroke="#fff" opacity=".25" stroke-width=".5"/>
     <polyline points="${poly}" fill="none" stroke="#4f8cff" stroke-width="1.4" vector-effect="non-scaling-stroke"/>${dots}
     <line x1="${cur[0]}" y1="0" x2="${cur[0]}" y2="50" stroke="#fff" stroke-width=".8" opacity=".8"/>`;
@@ -792,7 +842,7 @@ $('#rv-gem-all').onclick = async () => {
     .map((x) => `${Math.floor(x.i / 2) + 1}. ${x.m.san} (${x.d.cls.label}, besser: ${uciToSan(x.m.fenBefore, x.d.bestUci)})`);
   const res = { win: 'Sieg', loss: 'Niederlage', draw: 'Remis' }[R.h.result] || 'unbekannt';
   await askWithCancel(coachReview, gameSummaryPrompt({
-    color: whoName(R.h.userColor), level: LEVELS[R.h.level]?.name, result: res, accuracy: R.accuracy,
+    color: R.h.mode === '2p' ? 'beide Seiten (2 Spieler)' : whoName(R.h.userColor), level: R.h.mode === '2p' ? 'Mensch' : LEVELS[R.h.level]?.name, result: res, accuracy: R.accuracy,
     counts: `Patzer ${R.counts.blunder}, Fehler ${R.counts.mistake}, Ungenauigkeiten ${R.counts.inacc}`, critical,
   }), []);
 };
@@ -881,11 +931,9 @@ modeSel.value = MODE_TEXT[settings.coachMode] ? settings.coachMode : 'live';
 modeSel.onchange = () => { settings.coachMode = modeSel.value; saveSettings(); coach.say(MODE_TEXT[settings.coachMode], 'happy', [], 'nod'); };
 $('#set-key').value = settings.apiKey;
 $('#set-model').value = settings.model;
-$('#set-legal').checked = settings.showLegal;
 $('#set-retry').checked = settings.retryOffer;
 $('#set-key').onchange = (e) => { settings.apiKey = e.target.value.trim(); saveSettings(); };
 $('#set-model').onchange = (e) => { settings.model = e.target.value.trim() || 'gemini-flash-latest'; saveSettings(); };
-$('#set-legal').onchange = (e) => { settings.showLegal = e.target.checked; saveSettings(); };
 $('#set-retry').onchange = (e) => { settings.retryOffer = e.target.checked; saveSettings(); };
 $('#set-test').onclick = async () => {
   const msg = $('#set-msg');
