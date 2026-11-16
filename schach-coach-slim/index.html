@@ -19,6 +19,7 @@
   <section id="view-play" class="view active">
     <div id="coach-play"></div>
     <div class="board-wrap"><div id="board"></div></div>
+    <div id="clocks" class="clocks" hidden><div id="clk-op" class="clk"><span>Gegner</span><b>0:00</b></div><div id="clk-me" class="clk"><span>Du</span><b>0:00</b></div></div>
     <div id="status" class="status"></div>
     <div id="movestrip" class="movestrip"></div>
     <div class="controls">
@@ -130,6 +131,10 @@
   <div class="seg" id="seg-color">
     <button data-v="w">Weiß</button><button data-v="b">Schwarz</button><button data-v="r">Zufall</button>
   </div>
+  <p class="lbl">Bedenkzeit</p>
+  <div class="seg tcs" id="seg-tc"></div>
+  <div class="tc-custom"><label>Minuten <input type="number" id="tc-m" min="0" max="180" inputmode="numeric"></label><label>+ Sekunden pro Zug <input type="number" id="tc-inc" min="0" max="60" inputmode="numeric"></label></div>
+  <p class="note">0 Minuten = ohne Uhr. Wer keine Zeit mehr hat, verliert.</p>
   <p class="lbl">Gegner</p>
   <div class="elo-box">
     <div class="elo-val"><b id="elo-num">400</b> Elo<small id="elo-name"></small></div>
