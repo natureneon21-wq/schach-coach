@@ -2,7 +2,7 @@
 import { Chess } from './vendor/chess.js';
 import { Engine } from './engine.js';
 import { Board } from './board.js';
-import { createCoach, MOOD_FOR } from './coach.js';
+import { createCoach, MOOD_FOR, coachName } from './coach.js';
 import { LOOK_DEFAULTS, applyLook, initLookSettings } from './look.js';
 import {
   CLASSES, classify, winPct, moveAccuracy, uciParts, pvToSan, uciToSan,
@@ -67,6 +67,7 @@ document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('cli
 
 /* ---------- Trainerin & Bretter ---------- */
 applyLook(settings);
+settings.coachName = coachName(settings.avatar);
 const coach = createCoach($('#coach-play'), settings.avatar);
 const coachTrain = createCoach($('#coach-train'), settings.avatar);
 const coachReview = createCoach($('#coach-review'), settings.avatar);
@@ -595,7 +596,11 @@ $('#btn-train-hint').onclick = async () => {
    EINSTELLUNGEN
    ===================================================================== */
 initLookSettings($('#look-box'), settings, saveSettings, (k) => {
-  if (k === 'avatar') [coach, coachTrain, coachReview].forEach((c) => c.setAvatar(settings.avatar));
+  if (k === 'avatar') {
+    [coach, coachTrain, coachReview].forEach((c) => c.setAvatar(settings.avatar));
+    settings.coachName = coachName(settings.avatar); saveSettings();
+    coach.say(`Hallo, ich bin ${settings.coachName}, dein Schach-Coach! Ab jetzt schaue ich dir über die Schulter.`, 'happy', [], 'nod');
+  }
   [board, boardTrain, boardReview].forEach((b) => b.render());
 });
 $('#set-key').value = settings.apiKey;
@@ -609,7 +614,7 @@ $('#set-retry').onchange = (e) => { settings.retryOffer = e.target.checked; save
 $('#set-test').onclick = async () => {
   const msg = $('#set-msg');
   msg.textContent = 'Teste …';
-  try { msg.textContent = 'Gemini antwortet: ' + (await askGemini(settings, 'Sag in einem kurzen Satz Hallo als Schachtrainerin.')).slice(0, 200); }
+  try { msg.textContent = 'Gemini antwortet: ' + (await askGemini(settings, 'Sag in einem kurzen Satz Hallo als Schach-Coach.')).slice(0, 200); }
   catch (e) { msg.textContent = 'Fehler: ' + e.message; }
 };
 $('#set-clear').onclick = () => {
@@ -618,7 +623,7 @@ $('#set-clear').onclick = () => {
 };
 
 /* ---------- Start ---------- */
-coach.say('Hallo, ich bin Mira, deine Schachtrainerin! Wir üben das Denken am Brett: Was droht? Was hängt? Starte eine Partie, ich bewerte jeden deiner Züge.', 'happy', [
+coach.say(`Hallo, ich bin ${settings.coachName}, dein Schach-Coach! Wir üben das Denken am Brett: Was droht? Was hängt? Starte eine Partie, ich bewerte jeden deiner Züge.`, 'happy', [
   { label: 'Neue Partie', primary: true, onClick: openNewDialog },
 ], 'nod');
 board.set(new Chess(), { orientation: 'w', interactive: null });
