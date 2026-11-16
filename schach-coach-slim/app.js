@@ -553,6 +553,8 @@ function renderHistory() {
   if (!list.length) { el.innerHTML = '<p class="note">Keine Partie passt zu Suche und Filter.</p>'; return; }
   const shown = list.slice(0, HF.n);
   let html = '', last = '';
+  const lr = store.get('lastReview', null), lg = lr && hist.find((x) => x.id === lr.id);
+  if (lg && !q && HF.f === 'all') html += `<div class="hist resume" data-id="${lg.id}" data-idx="${lr.idx}"><div><b>Weiter ansehen</b><small>${new Date(lg.date).toLocaleString('de-DE')} · bis Zug ${Math.ceil(lr.idx / 2)}</small></div><span>›</span></div>`;
   for (const h of shown) {
     const m = new Date(h.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     if (m !== last) { last = m; html += `<div class="hist-group"><span>${m}</span></div>`; }
@@ -561,7 +563,7 @@ function renderHistory() {
   html += `<p class="note" style="text-align:center">${shown.length} von ${list.length} Partien${list.length < hist.length ? ` (gesamt ${hist.length})` : ''}</p>`;
   if (list.length > shown.length) html += '<button class="btn hist-more" id="hist-more">Weitere 50 anzeigen</button>';
   el.innerHTML = html;
-  el.querySelectorAll('.hist').forEach((n) => n.onclick = () => openReview(hist.find((h) => h.id === +n.dataset.id)));
+  el.querySelectorAll('.hist').forEach((n) => n.onclick = () => openReview(hist.find((h) => h.id === +n.dataset.id), n.dataset.idx ? { idx: +n.dataset.idx } : null));
   const more = $('#hist-more'); if (more) more.onclick = () => { HF.n += 50; renderHistory(); };
 }
 $('#hist-q').oninput = (e) => { HF.q = e.target.value; HF.n = 50; renderHistory(); };
@@ -583,9 +585,10 @@ async function analyzePos(fen) {
   return r;
 }
 
-async function openReview(h) {
+async function openReview(h, resume) {
   switchView('review');
   $('#review-empty').hidden = true; $('#review-main').hidden = false;
+  if (!(history.state && history.state.rv)) history.pushState({ rv: 1 }, '');
   const { moves } = rebuild(h);
   R = { h, moves, pos: [], data: [], idx: 0, sub: 1 };
   const bar = $('#review-progress'), fill = bar.firstElementChild;
@@ -600,7 +603,7 @@ async function openReview(h) {
   }
   bar.hidden = true;
   computeReview();
-  R.idx = firstCritical(0) ?? moves.length;
+  R.idx = resume && resume.idx >= 0 && resume.idx <= moves.length ? resume.idx : (firstCritical(0) ?? moves.length);
   R.sub = flawedAt(R.idx) ? 0 : 1;
   renderReview();
 }
@@ -643,6 +646,7 @@ function firstCritical(from) { for (let i = from; i < R.moves.length; i++) if (i
 
 function renderReview() {
   const { moves, data, idx, h } = R;
+  store.set('lastReview', { id: h.id, idx });
   const c = new Chess();
   moves.slice(0, idx).forEach((m) => c.move(uciParts(m.uci)));
   const last = idx > 0 ? { from: moves[idx - 1].from, to: moves[idx - 1].to } : null;
@@ -727,6 +731,7 @@ function practiceHere() {
   if (!R) return;
   const m = R.idx > 0 ? R.moves[R.idx - 1] : null;
   const fen = !m ? new Chess().fen() : (R.sub === 0 ? m.fenBefore : m.fenAfter);
+  history.pushState({ pr: 1 }, '');
   startPractice({ fen, color: R.h.userColor });
 }
 $('#rv-first').onclick = () => go(0);
@@ -736,7 +741,17 @@ $('#rv-practice').onclick = practiceHere;
 $('#rv-last').onclick = () => go(R.moves.length);
 $('#rv-crit').onclick = () => { const n = firstCritical(R.idx) ?? firstCritical(0); if (n) go(n); else coachReview.say('Du hast keine Fehler oder Patzer gemacht – stark!', 'happy', [], 'bounce'); };
 $('#rv-best').onclick = () => { if (!R || R.idx === 0) return; R.sub = R.sub === 0 ? 1 : 0; renderReview(); };
-$('#rv-back').onclick = () => { $('#review-main').hidden = true; $('#review-empty').hidden = false; renderHistory(); };
+function closeReview() { $('#review-main').hidden = true; $('#review-empty').hidden = false; renderHistory(); }
+$('#rv-back').onclick = () => { if (history.state && history.state.rv) history.back(); else closeReview(); };
+// Zurück-Taste des Handys: erst zur Partien-Liste bzw. zurück in die Analyse, nicht gleich die App schließen
+window.addEventListener('popstate', (e) => {
+  const st = e.state || {};
+  if (st.rv && R) {
+    switchView('review');
+    if (!R.pos.length) return;
+    $('#review-empty').hidden = true; $('#review-main').hidden = false; renderReview();
+  } else if (!$('#review-main').hidden && $('#view-review').classList.contains('active')) closeReview();
+});
 $('#rv-gem').onclick = async () => {
   if (!R || R.idx === 0) return;
   if (!settings.apiKey) { coachReview.say('Dafür brauche ich deinen Gemini-API-Key (Reiter „Mehr“).', 'think'); return; }
