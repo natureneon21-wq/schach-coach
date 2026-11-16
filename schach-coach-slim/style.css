@@ -180,3 +180,19 @@ body[data-layout=pip] .view { gap: 5px; padding-top: 4px; }
   .btn { padding: 8px 8px; font-size: 13px; }
   .board-wrap { width: min(100%, 52dvh); }
 }
+
+/* Wissen */
+.wq-row { display: flex; gap: 8px; }
+.wq-row input { flex: 1; min-width: 0; background: var(--panel); border: 1px solid #fff2; border-radius: 10px; padding: 11px; color: var(--text); font-size: 15px; }
+.wq-answer { background: var(--panel); border-radius: 12px; padding: 0; line-height: 1.5; font-size: 15px; }
+.wq-answer:not(:empty) { padding: 12px; }
+.wq-answer .ref { color: var(--accent); font-weight: 700; text-decoration: none; }
+.qcheck { margin-top: 8px; font-size: 13px; } .qcheck.good { color: var(--good); } .qcheck.warn { color: var(--warn); }
+.passage { background: var(--panel); border-radius: 12px; padding: 10px 12px; margin: 6px 0; font-size: 14px; line-height: 1.5; }
+.passage.focus { outline: 2px solid var(--accent); }
+.passage .ph { margin-bottom: 4px; } .passage small { color: var(--muted); }
+.passage .pt { white-space: pre-wrap; margin-bottom: 8px; }
+.lic { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.src { display: flex; flex-direction: column; width: 100%; text-align: left; background: var(--panel); color: var(--text); border: 0; border-radius: 10px; padding: 10px 12px; margin: 4px 0; font-size: 14px; cursor: pointer; }
+.src small { color: var(--muted); margin-top: 2px; }
+#wq-main h3, #wq-reader h3 { font-size: 16px; margin: 10px 0 4px; }
