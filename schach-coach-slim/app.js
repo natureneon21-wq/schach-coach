@@ -20,7 +20,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('schach.' + k, JSON.stringify(v)); } catch { /* voll */ } },
 };
 const settings = Object.assign(
-  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', tone: 'freundlich', ...LOOK_DEFAULTS },
+  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', tone: 'freundlich', coachMode: 'live', ...LOOK_DEFAULTS },
   store.get('settings', {}),
 );
 if (settings.model === 'gemini-3.8-flash') settings.model = 'gemini-flash-latest'; // wurde von der API abgelehnt
@@ -229,7 +229,8 @@ async function botTurn() {
   if (await finishIfOver()) return;
   prefetch();
   G.busy = false; renderPlay();
-  if (!G.over && weakPieces(G.chess, G.userColor).length && !G.chess.inCheck()) {
+  if (settings.coachMode !== 'live') { /* stiller Modus: keine Hinweise zum Gegnerzug */ }
+  else if (!G.over && weakPieces(G.chess, G.userColor).length && !G.chess.inCheck()) {
     coach.say(`Dein Gegner spielt ${mv.san}. Denk nach: Was will er damit? Droht dir etwas?`, 'think');
   } else if (G.chess.inCheck()) {
     coach.say('Schach! Welche Möglichkeiten hast du: wegziehen, dazwischenstellen oder den Angreifer schlagen?', 'think');
@@ -245,7 +246,8 @@ async function onUserMove(from, to, promotion) {
   G.moves.push(rec);
   renderPlay();
   if (G.chess.isGameOver()) { rec.cls = 'best'; await finishIfOver(); return; }
-  coach.say('Mal sehen …', 'think');
+  if (settings.coachMode === 'spaeter') { await botTurn(); return; } // stiller Modus: erst nach der Partie analysieren
+  if (settings.coachMode !== 'fehler') coach.say('Mal sehen …', 'think');
   const prevRes = prevPromise ? await prevPromise : null;
   const fb = await evaluateMove(prevRes, rec);
   if (!fb) { await botTurn(); return; }
@@ -254,6 +256,7 @@ async function onUserMove(from, to, promotion) {
   renderPlay();
   const [mood, eff] = MOOD_FOR[fb.cls.id];
   const id = fb.cls.id;
+  if (settings.coachMode === 'fehler' && (id === 'best' || id === 'good' || id === 'inacc')) { await botTurn(); return; }
   if (id === 'best' || id === 'good') {
     coach.say(pick(praise(id)), mood, [], eff);
     await sleep(900); await botTurn();
@@ -647,6 +650,10 @@ toneSel.innerHTML = Object.entries(TONES).map(([k, t]) => `<option value="${k}">
 toneSel.value = TONES[settings.tone] ? settings.tone : 'freundlich';
 toneSel.onchange = () => { settings.tone = toneSel.value; saveSettings(); coach.say(TN().sample, 'happy', [], 'nod'); };
 $('#set-rating-reset').onclick = () => { store.set('rating', { r: RATING_START, n: 0, hist: [] }); renderRating(); $('#set-msg').textContent = 'Elo-Schätzung zurückgesetzt.'; };
+const modeSel = $('#set-mode');
+const MODE_TEXT = { live: 'Ich kommentiere jeden deiner Züge.', fehler: 'Ich melde mich nur noch bei Fehlern und Patzern.', spaeter: 'Ich schweige während der Partie. Danach gehen wir alles in der Analyse durch.' };
+modeSel.value = MODE_TEXT[settings.coachMode] ? settings.coachMode : 'live';
+modeSel.onchange = () => { settings.coachMode = modeSel.value; saveSettings(); coach.say(MODE_TEXT[settings.coachMode], 'happy', [], 'nod'); };
 $('#set-key').value = settings.apiKey;
 $('#set-model').value = settings.model;
 $('#set-legal').checked = settings.showLegal;
