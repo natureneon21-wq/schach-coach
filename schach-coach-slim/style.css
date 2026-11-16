@@ -198,3 +198,6 @@ body[data-layout=pip] .view { gap: 5px; padding-top: 4px; }
 #wq-main h3, #wq-reader h3 { font-size: 16px; margin: 10px 0 4px; }
 .srcrow { display: flex; gap: 6px; align-items: stretch; } .srcrow .src { flex: 1; min-width: 0; }
 #wq-file { color: var(--muted); font-size: 13px; }
+.rating-box { background: var(--panel); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.rating-box b { font-size: 17px; } .rating-box small { color: var(--muted); font-size: 12px; line-height: 1.4; } .rating-box svg { width: 100%; height: 44px; margin-top: 4px; }
+.field select { background: var(--panel); border: 1px solid #fff2; border-radius: 10px; padding: 11px; color: var(--text); font-size: 15px; }
