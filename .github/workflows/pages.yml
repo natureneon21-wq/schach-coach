@@ -53,6 +53,14 @@ jobs:
           rm -rf _site/tools
           du -sh _site/wissen || true
 
+      - name: PDF.js holen (für eigene PDFs, Apache-2.0)
+        run: |
+          mkdir -p /tmp/pdfjs _site/vendor
+          cd /tmp/pdfjs
+          npm pack pdfjs-dist@4.10.38 && tar -xzf pdfjs-dist-*.tgz
+          cd "$GITHUB_WORKSPACE"
+          cp /tmp/pdfjs/package/build/pdf.min.mjs /tmp/pdfjs/package/build/pdf.worker.min.mjs _site/vendor/ || echo "PDF.js nicht verfügbar"
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
