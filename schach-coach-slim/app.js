@@ -9,6 +9,7 @@ import {
   weakPieces, explainMove, hintFor, PRAISE, pick,
 } from './analysis.js';
 import { askGemini, moveExplainPrompt, gameSummaryPrompt } from './gemini.js';
+import { initWissen } from './wissen.js';
 
 /* ---------- Hilfsfunktionen & Speicher ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -64,6 +65,7 @@ function switchView(name) {
   if (name === 'train') enterTrain();
 }
 document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
+initWissen(() => settings);
 
 /* ---------- Trainerin & Bretter ---------- */
 applyLook(settings);
