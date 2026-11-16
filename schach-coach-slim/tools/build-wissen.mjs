@@ -95,8 +95,8 @@ async function gutenberg() {
     const ix = Object.fromEntries(head.map((h, i) => [h, i]));
     for (const r of rows) {
       if (r[ix['Type']] !== 'Text' || !/^en(;|$)/.test(r[ix['Language']] || '')) continue;
-      const cs = (r[ix['Subjects']] || '').split(';').filter((x) => /chess/i.test(x));
-      const shelf = /chess/i.test(r[ix['Bookshelves']] || '');
+      const cs = (r[ix['Subjects']] || '').split(';').filter((x) => /\bchess\b/i.test(x));
+      const shelf = /\bchess\b/i.test(r[ix['Bookshelves']] || '');
       if (!shelf && !cs.some((x) => !/fiction|poetry|drama|juvenile/i.test(x))) continue; // keine Romane
       const id = Number(r[ix['Text#']]);
       books.set(id, { id, title: r[ix['Title']], authors: [{ name: r[ix['Authors']] }], formats: {} });
