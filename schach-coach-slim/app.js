@@ -664,13 +664,13 @@ function renderReview() {
     let t = `${Math.ceil(idx / 2)}${m.by === 'w' ? '.' : '…'} ${m.san} – ${d.cls.label} ${d.cls.sym}`;
     let mood = MOOD_FOR[d.cls.id][0];
     if (['mistake', 'blunder', 'inacc'].includes(d.cls.id)) {
-      const ex = explainMove({ fenBefore: m.fenBefore, played: m.uci, bestUci: d.bestUci, replyUci: d.reply, cls: d.cls });
+      const ex = explainMove({ fenBefore: m.fenBefore, played: m.uci, bestUci: d.bestUci, replyUci: d.reply, cls: d.cls, self: !mine });
       t += `\n${ex.text}`;
       if (mine && ex.question) t += `\n${ex.question}`;
       t += `\nBesser: ${uciToSan(m.fenBefore, d.bestUci)}${before ? ' (grüner Pfeil; rot = dein Zug)' : ''}`;
       const bl = R.pos[idx - 1].lines[0];
       if (mine && bl && bl.mate > 0) t += `\nHier war ein Matt in ${bl.mate} möglich!`;
-      if (!mine && ['mistake', 'blunder'].includes(d.cls.id)) { t = `Der Bot patzt hier: ${t}`; mood = 'happy'; }
+      if (!mine && ['mistake', 'blunder'].includes(d.cls.id)) { t = `Hier patze ich: ${t}`; mood = 'happy'; }
     } else if (!mine) { mood = 'neutral'; }
     const acts = before && mine && ['mistake', 'blunder'].includes(d.cls.id) ? [{ label: 'Ab hier üben', primary: true, onClick: practiceHere }] : [];
     coachReview.say(t, mine ? mood : (mood === 'wow' ? 'think' : mood), acts);
