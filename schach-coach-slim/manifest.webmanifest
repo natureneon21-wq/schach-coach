@@ -1,0 +1,17 @@
+{
+  "name": "Schach-Coach",
+  "short_name": "Schach-Coach",
+  "description": "Schach lernen mit Trainerin Mira: Denken statt Auswendiglernen.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161a26",
+  "theme_color": "#161a26",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

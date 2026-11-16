@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de">
+<head>
+<!-- KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren. -->
+<meta name="generator" content="Claude (Anthropic) - AI-generated">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#161a26">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Schach-Coach</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <section id="view-play" class="view active">
+    <div id="coach-play"></div>
+    <div class="board-wrap"><div id="board"></div></div>
+    <div id="status" class="status"></div>
+    <div id="movestrip" class="movestrip"></div>
+    <div class="controls">
+      <button class="btn" id="btn-hint">Tipp</button>
+      <button class="btn" id="btn-check">Denk-Routine</button>
+      <button class="btn" id="btn-resign">Aufgeben</button>
+      <button class="btn primary" id="btn-new">Neue Partie</button>
+    </div>
+  </section>
+
+  <section id="view-train" class="view">
+    <div id="coach-train"></div>
+    <div class="board-wrap"><div id="board-train"></div></div>
+    <div id="train-info" class="status"></div>
+    <div class="controls">
+      <button class="btn" id="btn-train-hint">Tipp</button>
+      <button class="btn" id="btn-train-skip">Überspringen</button>
+      <button class="btn primary" id="btn-train-next">Nächste Aufgabe</button>
+    </div>
+    <p class="note">Hier trainierst du Stellungen, in denen du in deinen eigenen Partien einen Fehler gemacht hast.
+      Neue Aufgaben entstehen automatisch, sobald du eine Partie analysieren lässt.</p>
+  </section>
+
+  <section id="view-review" class="view">
+    <div id="review-empty" class="empty">
+      <h2>Analyse</h2>
+      <p>Spiele eine Partie gegen einen Bot und lass sie danach analysieren. Hier siehst du dann jeden Zug bewertet und kannst die wichtigsten Momente nachspielen.</p>
+      <div id="history"></div>
+    </div>
+    <div id="review-main" hidden>
+      <div id="coach-review"></div>
+      <div id="review-progress" class="progress" hidden><div></div></div>
+      <div class="board-wrap"><div id="board-review"></div></div>
+      <svg id="graph" viewBox="0 0 300 50" preserveAspectRatio="none"></svg>
+      <div id="review-summary" class="status"></div>
+      <div class="controls">
+        <button class="btn" id="rv-first">«</button>
+        <button class="btn" id="rv-prev">‹</button>
+        <button class="btn" id="rv-next">›</button>
+        <button class="btn" id="rv-last">»</button>
+        <button class="btn primary" id="rv-crit">Nächster Fehler</button>
+      </div>
+      <div class="controls">
+        <button class="btn" id="rv-best">Besten Zug zeigen</button>
+        <button class="btn" id="rv-gem">Gemini erklärt</button>
+        <button class="btn" id="rv-gem-all">Gemini Fazit</button>
+      </div>
+      <div id="rv-moves" class="movelist"></div>
+      <button class="btn small" id="rv-back">Zur Liste</button>
+    </div>
+  </section>
+
+  <section id="view-settings" class="view">
+    <h2>Einstellungen</h2>
+    <label class="field">Gemini-API-Key (optional, für Tiefenanalyse)
+      <input id="set-key" type="password" autocomplete="off" placeholder="AIza…">
+    </label>
+    <label class="field">Gemini-Modell
+      <input id="set-model" type="text" placeholder="gemini-3.8-flash">
+    </label>
+    <button class="btn" id="set-test">Gemini testen</button>
+    <div id="set-msg" class="note"></div>
+    <label class="check"><input type="checkbox" id="set-legal"> Mögliche Züge als Punkte anzeigen</label>
+    <label class="check"><input type="checkbox" id="set-retry"> Bei Fehlern erst fragen und Zurücknehmen anbieten</label>
+    <button class="btn" id="set-clear">Gespeicherte Partien und Aufgaben löschen</button>
+    <p class="note"><b>Über diese App:</b> Der gesamte Code wurde mit KI (Claude von Anthropic) generiert („Vibe Coding“) und nicht von Hand geschrieben. Fehler sind möglich.</p>
+    <p class="note">Der API-Key bleibt nur in deinem Browser auf diesem Gerät. Die Zugbewertung selbst läuft komplett auf dem Handy (Stockfish), Gemini erklärt nur in Worten.</p>
+  </section>
+
+  <nav id="tabs">
+    <button data-view="play" class="active"><span>♞</span>Spielen</button>
+    <button data-view="train"><span>◎</span>Aufgaben</button>
+    <button data-view="review"><span>☰</span>Analyse</button>
+    <button data-view="settings"><span>⚙</span>Mehr</button>
+  </nav>
+</div>
+
+<dialog id="dlg-new">
+  <h2>Neue Partie</h2>
+  <p class="lbl">Deine Farbe</p>
+  <div class="seg" id="seg-color">
+    <button data-v="w">Weiß</button><button data-v="b">Schwarz</button><button data-v="r">Zufall</button>
+  </div>
+  <p class="lbl">Gegner</p>
+  <div class="seg col" id="seg-level"></div>
+  <div class="dlg-actions">
+    <button class="btn" id="new-cancel">Abbrechen</button>
+    <button class="btn primary" id="new-start">Los geht's</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-check">
+  <h2>Die Denk-Routine</h2>
+  <p>Vor jedem Zug, in dieser Reihenfolge:</p>
+  <ol class="routine">
+    <li><b>Was hat mein Gegner gerade gezogen?</b> Was will er damit? Was droht jetzt?</li>
+    <li><b>Was ist bei mir ungeschützt oder angegriffen?</b></li>
+    <li><b>Was ist beim Gegner ungeschützt?</b> Kann ich etwas gewinnen?</li>
+    <li><b>Kandidatenzüge:</b> erst Schachs, dann Schlagzüge, dann Drohungen.</li>
+    <li><b>Blunder-Check:</b> Wenn ich so ziehe – was kann der Gegner dann tun?</li>
+  </ol>
+  <div class="dlg-actions"><button class="btn primary" id="check-close">Verstanden</button></div>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
