@@ -80,14 +80,20 @@ export class Board {
   }
 
   _arrowSvg() {
-    const a = this.hint && this.hint.arrow;
-    if (!a) return '';
-    const [x1, y1] = this._center(a.from), [x2, y2] = this._center(a.to);
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-    const ex = x2 - ux * 0.35, ey = y2 - uy * 0.35;
-    const hx = -uy * 0.28, hy = ux * 0.28;
-    return `<svg class="arrows" viewBox="0 0 8 8"><line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="#35c98a" stroke-width="0.17" stroke-linecap="round" opacity="0.9"/>
-      <polygon points="${x2},${y2} ${ex + hx},${ey + hy} ${ex - hx},${ey - hy}" fill="#35c98a" opacity="0.9"/></svg>`;
+    const hh = this.hint;
+    const list = hh ? (hh.arrows || (hh.arrow ? [hh.arrow] : [])) : [];
+    if (!list.length) return '';
+    let out = '';
+    for (const a of list) {
+      const col = a.color || '#35c98a';
+      const [x1, y1] = this._center(a.from), [x2, y2] = this._center(a.to);
+      const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+      const ex = x2 - ux * 0.35, ey = y2 - uy * 0.35;
+      const hx = -uy * 0.28, hy = ux * 0.28;
+      out += `<line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="${col}" stroke-width="0.17" stroke-linecap="round" opacity="0.9"/>
+      <polygon points="${x2},${y2} ${ex + hx},${ey + hy} ${ex - hx},${ey - hy}" fill="${col}" opacity="0.9"/>`;
+    }
+    return `<svg class="arrows" viewBox="0 0 8 8">${out}</svg>`;
   }
 
   _click(e) {
