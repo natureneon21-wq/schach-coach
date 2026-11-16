@@ -18,7 +18,84 @@ export class Board {
     this.showLegal = true;
     this.promo = null;
     this.el.classList.add('board');
-    this.el.addEventListener('click', (e) => this._click(e));
+    this.drag = null;
+    this.noClick = false;
+    this.el.addEventListener('click', (e) => { if (this.noClick) return; this._click(e); });
+    this.el.addEventListener('pointerdown', (e) => this._down(e));
+    this.el.addEventListener('pointermove', (e) => this._move(e));
+    this.el.addEventListener('pointerup', (e) => this._up(e));
+    this.el.addEventListener('pointercancel', () => this._cancelDrag());
+  }
+
+  /** Farbe, die gerade bewegt werden darf ('both' = wer am Zug ist, z. B. 2 Spieler an einem Gerät). */
+  _who() {
+    if (!this.interactive) return null;
+    return this.interactive === 'both' ? this.chess.turn() : this.interactive;
+  }
+
+  _down(e) {
+    if (e.button > 0 || this.promo) return;
+    const who = this._who();
+    if (!who || this.chess.turn() !== who) return;
+    const sqEl = e.target.closest('[data-sq]');
+    if (!sqEl) return;
+    const p = this.chess.get(sqEl.dataset.sq);
+    if (!p || p.color !== who) return;
+    this.drag = { from: sqEl.dataset.sq, x: e.clientX, y: e.clientY, started: false, id: e.pointerId, ghost: null };
+  }
+
+  _move(e) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.id) return;
+    if (!d.started) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
+      d.started = true;
+      try { this.el.setPointerCapture(e.pointerId); } catch (_) { /* egal */ }
+      this.selected = d.from;
+      this.render();
+      const src = this.el.querySelector(`[data-sq="${d.from}"]`);
+      if (src) src.classList.add('dragsrc');
+      const p = this.chess.get(d.from);
+      const g = document.createElement('div');
+      g.className = 'ghost';
+      g.innerHTML = pieceHtml(p.type, p.color);
+      this.el.appendChild(g);
+      d.ghost = g;
+    }
+    const r = this.el.getBoundingClientRect();
+    const size = r.width / 8;
+    d.ghost.style.width = d.ghost.style.height = size * 1.25 + 'px';
+    d.ghost.style.left = (e.clientX - r.left - size * 0.625) + 'px';
+    d.ghost.style.top = (e.clientY - r.top - size * 0.8) + 'px';
+    e.preventDefault();
+  }
+
+  _up(e) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.id) return;
+    this.drag = null;
+    if (!d.started) return;
+    this.noClick = true;
+    setTimeout(() => { this.noClick = false; }, 60);
+    if (d.ghost) d.ghost.remove();
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const sqEl = under && under.closest ? under.closest('[data-sq]') : null;
+    const to = sqEl && this.el.contains(sqEl) ? sqEl.dataset.sq : null;
+    const c = this.chess;
+    const mv = to && to !== d.from ? c.moves({ square: d.from, verbose: true }).find((m) => m.to === to) : null;
+    if (!mv) { this.render(); return; }
+    if (mv.promotion) {
+      this.promo = { from: d.from, to, color: c.turn() };
+      this.render();
+      return;
+    }
+    this.selected = null;
+    this.onMove(d.from, to);
+  }
+
+  _cancelDrag() {
+    if (this.drag && this.drag.started) { if (this.drag.ghost) this.drag.ghost.remove(); this.drag = null; this.render(); return; }
+    this.drag = null;
   }
 
   set(chess, { orientation, last, interactive, hint, showLegal, keepSelection } = {}) {
@@ -28,6 +105,7 @@ export class Board {
     if (interactive !== undefined) this.interactive = interactive;
     if (hint !== undefined) this.hint = hint;
     if (showLegal !== undefined) this.showLegal = showLegal;
+    this.drag = null;
     if (!keepSelection) { this.selected = null; this.promo = null; }
     this.render();
   }
@@ -109,7 +187,8 @@ export class Board {
     if (this.promo) { this.promo = null; this.selected = null; this.render(); return; }
     const sq = sqEl.dataset.sq;
     const c = this.chess;
-    if (c.turn() !== this.interactive) return;
+    const who = this._who();
+    if (c.turn() !== who) return;
     if (this.selected) {
       const mv = c.moves({ square: this.selected, verbose: true }).find((m) => m.to === sq);
       if (mv) {
@@ -125,7 +204,7 @@ export class Board {
       }
     }
     const p = c.get(sq);
-    this.selected = p && p.color === this.interactive && sq !== this.selected ? sq : null;
+    this.selected = p && p.color === who && sq !== this.selected ? sq : null;
     this.render();
   }
 }
