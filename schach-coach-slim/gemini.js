@@ -1,4 +1,5 @@
 // KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren.
+import { toneGem } from './persona.js';
 // Optionale Tiefenanalyse über die Gemini-API. Die Engine liefert die Fakten, Gemini erklärt sie nur.
 
 const SYSTEM = (name) => `Du bist ${name || 'Mira'}, ein freundlicher Schach-Coach nach der Russischen Schule.
@@ -14,7 +15,7 @@ export async function askGemini(settings, prompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM(settings.coachName) }] },
+      systemInstruction: { parts: [{ text: SYSTEM(settings.coachName) + '\n' + toneGem(settings.tone) }] },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.5, maxOutputTokens: 2048 },
     }),
