@@ -531,14 +531,37 @@ function rebuild(h) {
   return { moves, startFen: new Chess().fen() };
 }
 
+const HF = { q: '', f: 'all', n: 50 };
+const HRES = { win: 'Sieg', loss: 'Niederlage', draw: 'Remis', abandoned: 'Abgebrochen' };
 function renderHistory() {
   const hist = store.get('history', []);
   const el = $('#history');
+  $('#hist-tools').hidden = hist.length < 6;
   if (!hist.length) { el.innerHTML = '<p class="note">Noch keine Partien gespeichert.</p>'; return; }
-  const res = { win: 'Sieg', loss: 'Niederlage', draw: 'Remis', abandoned: 'Abgebrochen' };
-  el.innerHTML = hist.map((h) => `<div class="hist" data-id="${h.id}"><div><b>${res[h.result] || '?'}</b> gegen ${LEVELS[h.level]?.name || 'Bot'}<small>${new Date(h.date).toLocaleString('de-DE')} · ${h.ucis.length} Halbzüge · ${whoName(h.userColor)}</small></div><span>›</span></div>`).join('');
+  const q = HF.q.trim().toLowerCase();
+  const text = (h) => `${HRES[h.result] || ''} ${LEVELS[h.level]?.name || 'Bot'} ${whoName(h.userColor)} ${new Date(h.date).toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'short' })} ${new Date(h.date).toLocaleDateString('de-DE')}`.toLowerCase();
+  const list = hist.filter((h) => (HF.f === 'all' || h.result === HF.f) && (!q || q.split(/\s+/).every((w) => text(h).includes(w))));
+  if (!list.length) { el.innerHTML = '<p class="note">Keine Partie passt zu Suche und Filter.</p>'; return; }
+  const shown = list.slice(0, HF.n);
+  let html = '', last = '';
+  for (const h of shown) {
+    const m = new Date(h.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    if (m !== last) { last = m; html += `<div class="hist-group"><span>${m}</span></div>`; }
+    html += `<div class="hist" data-id="${h.id}"><div><b>${HRES[h.result] || '?'}</b> gegen ${LEVELS[h.level]?.name || 'Bot'}<small>${new Date(h.date).toLocaleString('de-DE')} · ${h.ucis.length} Halbzüge · ${whoName(h.userColor)}</small></div><span>›</span></div>`;
+  }
+  html += `<p class="note" style="text-align:center">${shown.length} von ${list.length} Partien${list.length < hist.length ? ` (gesamt ${hist.length})` : ''}</p>`;
+  if (list.length > shown.length) html += '<button class="btn hist-more" id="hist-more">Weitere 50 anzeigen</button>';
+  el.innerHTML = html;
   el.querySelectorAll('.hist').forEach((n) => n.onclick = () => openReview(hist.find((h) => h.id === +n.dataset.id)));
+  const more = $('#hist-more'); if (more) more.onclick = () => { HF.n += 50; renderHistory(); };
 }
+$('#hist-q').oninput = (e) => { HF.q = e.target.value; HF.n = 50; renderHistory(); };
+$('#hist-filter').onclick = (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  HF.f = b.dataset.f; HF.n = 50;
+  $('#hist-filter').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+  renderHistory();
+};
 
 async function analyzePos(fen) {
   const c = new Chess(fen);
