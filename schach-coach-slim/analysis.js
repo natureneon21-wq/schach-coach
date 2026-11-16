@@ -78,6 +78,7 @@ const acc = (t) => ({ p: 'den Bauern', n: 'den Springer', b: 'den Läufer', r: '
  */
 export function explainMove(ctx) {
   const facts = [];
+  const self = !!ctx.self; // Der Bot/Coach kommentiert seinen eigenen Zug in der Ich-Form
   let cause = 'plan';
   let text = '';
   const after = new Chess(ctx.fenBefore);
@@ -92,14 +93,14 @@ export function explainMove(ctx) {
       const r = t.move(uciParts(ctx.replyUci));
       if (t.isCheckmate()) {
         cause = 'mate';
-        text = `Nach deinem Zug kann dein Gegner mit ${r.san} Matt setzen.`;
+        text = self ? `Nach meinem Zug kannst du mit ${r.san} Matt setzen.` : `Nach deinem Zug kann dein Gegner mit ${r.san} Matt setzen.`;
       } else if (r.captured) {
         cause = 'hang';
-        text = `Nach deinem Zug kann dein Gegner mit ${r.san} ${acc(r.captured)} schlagen.`;
+        text = self ? `Nach meinem Zug kannst du mit ${r.san} ${acc(r.captured)} schlagen.` : `Nach deinem Zug kann dein Gegner mit ${r.san} ${acc(r.captured)} schlagen.`;
         facts.push(`Gegner-Antwort ${r.san} schlägt ${NAME[r.captured]}`);
       } else if (t.inCheck()) {
         cause = 'check';
-        text = `Nach deinem Zug hat dein Gegner mit ${r.san} eine starke Antwort mit Schach.`;
+        text = self ? `Nach meinem Zug hast du mit ${r.san} eine starke Antwort mit Schach.` : `Nach deinem Zug hat dein Gegner mit ${r.san} eine starke Antwort mit Schach.`;
       }
     } catch { /* ignore */ }
   }
@@ -128,7 +129,7 @@ export function explainMove(ctx) {
       facts.push(`Bester Zug war ${bm.san}`);
     } catch { /* ignore */ }
   }
-  if (!text) text = missed || 'Dieser Zug verschlechtert deine Stellung. Es gab einen deutlich besseren Plan.';
+  if (!text) text = missed || (self ? 'Dieser Zug verschlechtert meine Stellung. Es gab einen deutlich besseren Plan.' : 'Dieser Zug verschlechtert deine Stellung. Es gab einen deutlich besseren Plan.');
   else if (missed) text += ' ' + missed;
 
   const question = {
