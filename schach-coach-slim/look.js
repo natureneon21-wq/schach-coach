@@ -67,7 +67,7 @@ export function initLookSettings(box, s, save, onChange) {
         <div class="seg" data-k="pipPos"><button data-v="top" class="${s.pipPos === 'top' ? 'on' : ''}">Oben</button><button data-v="bottom" class="${s.pipPos !== 'top' ? 'on' : ''}">Unten</button></div>
         <label class="field">Platz für das Video: <b id="pip-val">${s.pipH}</b> % der Höhe
           <input type="range" id="pip-h" min="15" max="40" step="1" value="${s.pipH}"></label>
-        <p class="note">Starte das Video (YouTube, Netflix …) in seiner App, wechsle per Bild-im-Bild zurück und schiebe das kleine Fenster in den gestrichelten Bereich. Brett, Mira und Tasten bleiben frei. Ob Bild-im-Bild klappt, hängt von der Video-App und deinem Konto ab.</p>
+        <p class="note">Starte das Video (YouTube, Netflix …) in seiner App, wechsle per Bild-im-Bild zurück und schiebe das kleine Fenster in den gestrichelten Bereich. Brett, dein Coach und die Tasten bleiben frei. Ob Bild-im-Bild klappt, hängt von der Video-App und deinem Konto ab.</p>
       </div>
       <button class="btn small" id="fs-toggle">Browser-Vollbild an/aus</button>`;
     box.querySelectorAll('.grid-pick, .seg').forEach((g) => {
