@@ -1,6 +1,6 @@
 // KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren.
-// Service Worker: App-Dateien "network first" (Updates kommen sofort an), große Bibliotheken "cache first" (offline nutzbar).
-const VERSION = 'v3';
+// Service Worker: App-Dateien "network first" (Updates kommen sofort an, HTTP-Cache wird umgangen), große Bibliotheken "cache first" (offline nutzbar).
+const VERSION = 'v4';
 const CORE = ['./', 'index.html', 'style.css', 'app.js', 'engine.js', 'analysis.js', 'board.js', 'coach.js', 'gemini.js', 'pieces.js', 'look.js', 'wissen.js', 'persona.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const VENDOR = ['vendor/chess.js', 'vendor/stockfish.js', 'vendor/stockfish.wasm'];
@@ -27,7 +27,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(
-    fetch(e.request).then((res) => {
+    fetch(e.request, { cache: 'no-cache' }).then((res) => {
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(e.request, copy));
       return res;
