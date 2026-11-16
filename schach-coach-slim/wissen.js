@@ -6,6 +6,8 @@
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+import { toneGem } from './persona.js';
+
 let meta = null, S = [], mine = [], docs = null, index = null, loading = null;
 
 // --- Eigene Quellen (PDF/Text) liegen nur lokal im Browser (IndexedDB), nie auf einem Server ---
@@ -212,7 +214,7 @@ export function initWissen(getSettings) {
       if (!settings.apiKey) { ui.status.textContent = 'Treffer aus den Büchern (für eine Antwort in Worten: Gemini-Key in den Einstellungen).'; return; }
       ui.status.textContent = 'Gemini formuliert die Antwort nur aus diesen Stellen …';
       const ctx = hits.map((d, i) => `[${i + 1}] (${S[docs[d].s].title}, ${S[docs[d].s].author})\n${docs[d].t}`).join('\n\n');
-      const text = await gemini(settings, SYS_ANSWER, `Frage: ${q}\n\nAuszüge:\n${ctx}`, 0.2);
+      const text = await gemini(settings, SYS_ANSWER + '\nStil der Antwort (Quellenregeln bleiben unverändert): ' + toneGem(settings.tone), `Frage: ${q}\n\nAuszüge:\n${ctx}`, 0.2);
       ui.answer.innerHTML = renderAnswer(text, hits);
       ui.status.textContent = 'Antwort aus den Quellen. Die Nummern führen zur Originalstelle.';
     } catch (e) { ui.status.textContent = e.message; }
