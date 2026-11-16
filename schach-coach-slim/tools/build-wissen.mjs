@@ -57,8 +57,8 @@ function chunkText(raw) {
   flush();
   return chunks;
 }
-function addSource(meta, text) {
-  const chunks = chunkText(text);
+function addSource(meta, text) { addChunks(meta, chunkText(text)); }
+function addChunks(meta, chunks) {
   if (chunks.length < 3) { console.log(`  übersprungen (zu kurz): ${meta.title}`); return; }
   const size = chunks.reduce((n, c) => n + c.t.length, 0);
   if (total + size > MAX_TOTAL) { console.log('  Grenze erreicht, übersprungen:', meta.title); return; }
@@ -95,8 +95,8 @@ async function gutenberg() {
     const ix = Object.fromEntries(head.map((h, i) => [h, i]));
     for (const r of rows) {
       if (r[ix['Type']] !== 'Text' || !/^en(;|$)/.test(r[ix['Language']] || '')) continue;
-      const cs = (r[ix['Subjects']] || '').split(';').filter((x) => /\bchess\b/i.test(x));
-      const shelf = /\bchess\b/i.test(r[ix['Bookshelves']] || '');
+      const cs = (r[ix['Subjects']] || '').split(';').filter((x) => /chess/i.test(x));
+      const shelf = /chess/i.test(r[ix['Bookshelves']] || '');
       if (!shelf && !cs.some((x) => !/fiction|poetry|drama|juvenile/i.test(x))) continue; // keine Romane
       const id = Number(r[ix['Text#']]);
       books.set(id, { id, title: r[ix['Title']], authors: [{ name: r[ix['Authors']] }], formats: {} });
@@ -161,8 +161,58 @@ async function wikibooks() {
   }, text);
 }
 
+// --- Wikipedia: Eröffnungen, Taktik, Strategie, Endspiele (CC BY-SA 4.0) ---
+async function wikipedia() {
+  console.log('Wikipedia …');
+  const api = 'https://en.wikipedia.org/w/api.php';
+  const cats = [['Eröffnungen', 'Chess openings'], ['Taktik', 'Chess tactics'], ['Strategie', 'Chess strategy'], ['Endspiele', 'Chess endgames']];
+  for (const [label, cat] of cats) {
+    const r = await get(`${api}?action=query&list=categorymembers&cmtitle=${encodeURIComponent('Category:' + cat)}&cmnamespace=0&cmtype=page&cmlimit=250&format=json`);
+    if (!r) continue;
+    const titles = ((await r.json()).query?.categorymembers || []).map((m) => m.title);
+    console.log(`  ${cat}: ${titles.length} Artikel`);
+    const parts = [];
+    for (let i = 0; i < titles.length; i += 4) {
+      await Promise.all(titles.slice(i, i + 4).map(async (title) => {
+        const x = await get(`${api}?action=query&prop=extracts&explaintext=1&redirects=1&titles=${encodeURIComponent(title)}&format=json&formatversion=2`);
+        if (!x) return;
+        const text = (await x.json()).query?.pages?.[0]?.extract || '';
+        if (text.length > 600) parts.push({ title, text });
+      }));
+    }
+    parts.sort((a, b) => a.title.localeCompare(b.title));
+    const text = parts.map((q) => `== ${q.title} ==\n\n${q.text.replace(/^==+.*==+$/gm, '')}`).join('\n\n');
+    if (text) addSource({
+      title: `Wikipedia: ${label}`, author: 'Wikipedia-Autoren', url: `https://en.wikipedia.org/wiki/Category:${cat.replace(/ /g, '_')}`,
+      lic: 'CC BY-SA 4.0 (Wikipedia)', lang: 'en',
+    }, text);
+  }
+}
+
+// --- Lichess Eröffnungsverzeichnis (CC0): ECO-Code, Name, Zugfolge ---
+async function lichessOpenings() {
+  console.log('Lichess Eröffnungen …');
+  const lines = [];
+  for (const f of ['a', 'b', 'c', 'd', 'e']) {
+    const r = await get(`https://raw.githubusercontent.com/lichess-org/chess-openings/master/${f}.tsv`);
+    if (!r) continue;
+    const rows = (await r.text()).split('\n').slice(1).map((l) => l.split('\t')).filter((c) => c.length >= 3);
+    for (const [eco, name, pgn] of rows) lines.push({ eco, text: `${eco} ${name}: ${pgn}` });
+  }
+  if (!lines.length) return;
+  const chunks = [];
+  for (let i = 0; i < lines.length; i += 10) {
+    const g = lines.slice(i, i + 10);
+    chunks.push({ h: `ECO ${g[0].eco}–${g[g.length - 1].eco}`, t: g.map((x) => x.text).join('\n') });
+  }
+  addChunks({
+    title: 'Lichess: Eröffnungsverzeichnis (ECO)', author: 'Lichess-Community', url: 'https://github.com/lichess-org/chess-openings',
+    lic: 'CC0 (gemeinfrei)', lang: 'en',
+  }, chunks);
+}
+
 await mkdir(OUT, { recursive: true });
-for (const step of [gutenberg, wikibooks]) {
+for (const step of [gutenberg, wikibooks, wikipedia, lichessOpenings]) {
   try { await step(); } catch (e) { console.log('Quelle fehlgeschlagen:', e.message); }
 }
 for (const s of sources) {
