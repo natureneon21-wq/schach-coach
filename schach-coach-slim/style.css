@@ -158,10 +158,16 @@ dialog::backdrop { background: #000a; }
 /* ---- Bild-im-Bild: Platz für das schwebende Video freihalten ---- */
 body[data-layout=pip] #app { height: calc(100dvh - var(--pip-h)); }
 body[data-layout=pip][data-pip-pos=top] #app { margin-top: var(--pip-h); }
-body[data-layout=pip]::after { content: "Hier das Video-Fenster platzieren"; position: fixed; left: 8px; right: 8px; height: calc(var(--pip-h) - 16px); margin: 8px 0; border: 2px dashed #ffffff26; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ffffff4d; font-size: 13px; pointer-events: none; z-index: 0; }
-body[data-layout=pip][data-pip-pos=top]::after { top: 0; }
-body[data-layout=pip][data-pip-pos=bottom]::after { bottom: 0; }
-body[data-layout=pip] .board-wrap { width: min(100%, calc((100dvh - var(--pip-h)) * .58)); }
+#pip-guide { display: none; position: fixed; left: 8px; right: 8px; height: calc(var(--pip-h) - 8px); margin: 4px 0; border: 2px dashed #ffffff26; border-radius: 12px; align-items: center; justify-content: center; color: #ffffff4d; font-size: 13px; pointer-events: none; z-index: 5; }
+body[data-layout=pip] #pip-guide { display: flex; }
+body[data-layout=pip][data-pip-pos=top] #pip-guide { top: 0; }
+body[data-layout=pip][data-pip-pos=bottom] #pip-guide { bottom: 0; }
+.pip-grip { position: absolute; left: 50%; transform: translateX(-50%); width: 84px; height: 28px; border-radius: 14px; background: #ffffff33; pointer-events: auto; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.pip-grip i { width: 34px; height: 4px; border-radius: 2px; background: #ffffffaa; }
+#pip-guide.drag .pip-grip { background: var(--accent); }
+body[data-pip-pos=top] .pip-grip { bottom: -16px; } body[data-pip-pos=bottom] .pip-grip { top: -16px; }
+body[data-layout=pip] .board-wrap { width: min(100%, max(200px, calc(100dvh - var(--pip-h) - 330px))); }
+body[data-layout=pip] .bubble-text { max-height: 6.2em; overflow-y: auto; }
 body[data-layout=pip] .avatar, body[data-layout=pip] .avatar svg { flex-basis: 54px; width: 54px; height: 54px; }
 body[data-layout=pip] .bubble { min-height: 54px; font-size: 13.5px; padding: 6px 10px; }
 body[data-layout=pip] .btn { padding: 8px 8px; font-size: 13px; }
