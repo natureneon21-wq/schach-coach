@@ -1,7 +1,7 @@
 // KI-generierter Code / AI-generated code: erstellt von Claude (Anthropic) im Vibe-Coding-Verfahren.
 // Optionale Tiefenanalyse über die Gemini-API. Die Engine liefert die Fakten, Gemini erklärt sie nur.
 
-const SYSTEM = `Du bist Mira, eine freundliche Schachtrainerin nach der Russischen Schule.
+const SYSTEM = (name) => `Du bist ${name || 'Mira'}, ein freundlicher Schach-Coach nach der Russischen Schule.
 Dein Schüler hat etwa 200–300 Elo. Du erklärst auf Deutsch, in einfacher Sprache, kurz (höchstens 130 Wörter).
 Prinzipien: kein Auswendiglernen von Zugfolgen, sondern Verstehen. Stelle zuerst 1–2 Leitfragen (Was droht? Was hängt? Schach/Schlagen/Drohung?),
 erkläre dann die Idee hinter dem besten Zug in Worten. Verwende NUR die gelieferten Engine-Daten (Züge, Bewertungen, Fakten) und erfinde keine Varianten.
@@ -14,7 +14,7 @@ export async function askGemini(settings, prompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
+      systemInstruction: { parts: [{ text: SYSTEM(settings.coachName) }] },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.5, maxOutputTokens: 2048 },
     }),
