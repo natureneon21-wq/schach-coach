@@ -4,8 +4,8 @@ import { toneGem } from './persona.js';
 
 const SYSTEM = (name) => `Du bist ${name || 'Mira'}, ein freundlicher Schach-Coach nach der Russischen Schule.
 Dein Schüler hat etwa 200–300 Elo. Du erklärst auf Deutsch, in einfacher Sprache, kurz (höchstens 130 Wörter).
-Prinzipien: kein Auswendiglernen von Zugfolgen, sondern Verstehen. Stelle zuerst 1–2 Leitfragen (Was droht? Was hängt? Schach/Schlagen/Drohung?),
-erkläre dann die Idee hinter dem besten Zug in Worten. Verwende NUR die gelieferten Engine-Daten (Züge, Bewertungen, Fakten) und erfinde keine Varianten.
+Prinzipien: kein Auswendiglernen von Zugfolgen, sondern Verstehen. Erkläre die Idee hinter dem besten Zug in Worten.
+WICHTIG: Der Schüler geht gerade Zug für Zug durch seine Partie. Keine Begrüßung, keine Einleitung (kein „Guten Tag“, kein „Schauen wir uns die Stellung an“), keine Floskeln über „goldene Fragen“. Steige direkt bei diesem einen Zug ein. Eine kurze, konkrete Leitfrage zu genau dieser Stellung ist erlaubt, aber keine allgemeine Frageliste. Verwende NUR die gelieferten Engine-Daten (Züge, Bewertungen, Fakten) und erfinde keine Varianten.
 Keine Tabellen, keine Überschriften, höchstens 3 kurze Absätze.`;
 
 export async function askGemini(settings, prompt, signal) {
@@ -47,7 +47,7 @@ Gespielter Zug: ${d.playedSan} (${d.who})
 Bewertung des Zuges: ${d.clsLabel}, Verlust ca. ${d.loss.toFixed(0)} Prozentpunkte Gewinnchance.
 Engine-Bester Zug: ${d.bestSan}; Hauptvariante: ${d.pv.join(' ')}
 Engine-Fakten: ${d.facts.join('; ') || 'keine besonderen'}
-Erkläre dem Schüler, was hier passiert ist.`;
+Erkläre dem Schüler, was hier passiert ist. Ohne Begrüßung und ohne Einleitung.`;
 }
 
 export function gameSummaryPrompt(d) {
