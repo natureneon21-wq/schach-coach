@@ -72,12 +72,13 @@
   </section>
 
   <section id="view-settings" class="view">
+    <div id="look-box"></div>
     <h2>Einstellungen</h2>
     <label class="field">Gemini-API-Key (optional, für Tiefenanalyse)
       <input id="set-key" type="password" autocomplete="off" placeholder="AIza…">
     </label>
     <label class="field">Gemini-Modell
-      <input id="set-model" type="text" placeholder="gemini-3.8-flash">
+      <input id="set-model" type="text" placeholder="gemini-flash-latest">
     </label>
     <button class="btn" id="set-test">Gemini testen</button>
     <div id="set-msg" class="note"></div>
@@ -103,7 +104,12 @@
     <button data-v="w">Weiß</button><button data-v="b">Schwarz</button><button data-v="r">Zufall</button>
   </div>
   <p class="lbl">Gegner</p>
-  <div class="seg col" id="seg-level"></div>
+  <div class="elo-box">
+    <div class="elo-val"><b id="elo-num">400</b> Elo<small id="elo-name"></small></div>
+    <input type="range" id="elo-range" min="200" max="3000" step="50" value="400">
+    <div class="elo-marks"><span>200</span><span>1000</span><span>2000</span><span>3000</span></div>
+    <p class="note">Elo-Werte sind eine grobe Stockfish-Skala. Gegen Menschen fühlt sich dieselbe Zahl oft anders an.</p>
+  </div>
   <div class="dlg-actions">
     <button class="btn" id="new-cancel">Abbrechen</button>
     <button class="btn primary" id="new-start">Los geht's</button>
