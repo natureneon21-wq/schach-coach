@@ -3,6 +3,7 @@ import { Chess } from './vendor/chess.js';
 import { Engine } from './engine.js';
 import { Board } from './board.js';
 import { createCoach, MOOD_FOR } from './coach.js';
+import { LOOK_DEFAULTS, applyLook, initLookSettings } from './look.js';
 import {
   CLASSES, classify, winPct, moveAccuracy, uciParts, pvToSan, uciToSan,
   weakPieces, explainMove, hintFor, PRAISE, pick,
@@ -17,18 +18,34 @@ const store = {
   set(k, v) { try { localStorage.setItem('schach.' + k, JSON.stringify(v)); } catch { /* voll */ } },
 };
 const settings = Object.assign(
-  { apiKey: '', model: 'gemini-3.8-flash', showLegal: true, retryOffer: true, level: 1, color: 'r' },
+  { apiKey: '', model: 'gemini-flash-latest', showLegal: true, retryOffer: true, level: 400, color: 'r', ...LOOK_DEFAULTS },
   store.get('settings', {}),
 );
+if (settings.model === 'gemini-3.8-flash') settings.model = 'gemini-flash-latest'; // wurde von der API abgelehnt
 const saveSettings = () => store.set('settings', settings);
 
-const LEVELS = [
-  { name: 'Anfänger-Bot', elo: '~200', depth: 1, multipv: 6, temp: 260 },
-  { name: 'Spaziergänger', elo: '~400', depth: 2, multipv: 5, temp: 160 },
-  { name: 'Vereinsneuling', elo: '~600', depth: 3, multipv: 4, temp: 90 },
-  { name: 'Hobbyspieler', elo: '~800', depth: 5, multipv: 3, temp: 50 },
-  { name: 'Clubspieler', elo: '~1000', depth: 8, multipv: 3, temp: 25 },
+/* ---------- Bot-Stufen: 200 bis 3000 Elo in 50er-Schritten ----------
+   Unter ~1350 Elo: Stockfish mit Tiefenlimit + zufälliger Auswahl unter den besten Zügen (Softmax).
+   Ab 1350 Elo: Stockfish mit eingebauter Stärkebegrenzung (UCI_Elo). Die Zahlen sind eine grobe Stockfish-Skala. */
+const OLD_ELOS = [200, 400, 600, 800, 1000]; // alte gespeicherte Partien/Einstellungen speicherten den Index 0-4
+const ANCHORS = [ // elo, Tiefe, MultiPV, Softmax-Temperatur
+  [200, 1, 6, 260], [400, 2, 5, 160], [600, 3, 4, 90], [800, 5, 3, 50], [1000, 8, 3, 25], [1200, 10, 2, 12], [1350, 12, 2, 8],
 ];
+const NAMES = [[200, 'Anfänger-Bot'], [400, 'Spaziergänger'], [600, 'Vereinsneuling'], [800, 'Hobbyspieler'], [1000, 'Clubspieler'],
+  [1200, 'Fortgeschrittener'], [1400, 'Vereinsspieler'], [1600, 'Turnierspieler'], [1800, 'Kandidat'], [2000, 'Meisterkandidat'],
+  [2200, 'FIDE-Meister-Niveau'], [2400, 'Internationaler Meister'], [2600, 'Großmeister'], [2800, 'Weltklasse'], [3000, 'Engine-Monster']];
+function levelInfo(x) {
+  const num = x <= 10 ? OLD_ELOS[Math.max(0, Math.min(4, Math.round(x)))] : Math.max(200, Math.min(3000, Math.round(x / 50) * 50));
+  const name = NAMES.filter((n) => n[0] <= num).pop()[1];
+  let a = ANCHORS[ANCHORS.length - 1];
+  for (let i = 0; i < ANCHORS.length - 1; i++) {
+    const [e1, d1, m1, t1] = ANCHORS[i], [e2, d2, m2, t2] = ANCHORS[i + 1];
+    if (num >= e1 && num <= e2) { const f = (num - e1) / (e2 - e1); a = [num, Math.round(d1 + (d2 - d1) * f), Math.round(m1 + (m2 - m1) * f), t1 + (t2 - t1) * f]; break; }
+  }
+  return { name, elo: '~' + num, num, depth: a[1], multipv: a[2], temp: a[3], uci: num >= 1350 };
+}
+// LEVELS[x] liefert die Stufe zu einem Wert (Elo oder alter Index), damit der übrige Code unverändert bleibt.
+const LEVELS = new Proxy([], { get: (t, k) => (/^\d+$/.test(String(k)) ? levelInfo(+k) : t[k]) });
 
 /* ---------- Engine ---------- */
 const engine = new Engine();
@@ -49,9 +66,10 @@ function switchView(name) {
 document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
 
 /* ---------- Trainerin & Bretter ---------- */
-const coach = createCoach($('#coach-play'));
-const coachTrain = createCoach($('#coach-train'));
-const coachReview = createCoach($('#coach-review'));
+applyLook(settings);
+const coach = createCoach($('#coach-play'), settings.avatar);
+const coachTrain = createCoach($('#coach-train'), settings.avatar);
+const coachReview = createCoach($('#coach-review'), settings.avatar);
 const board = new Board($('#board'), { onMove: (f, t, p) => onUserMove(f, t, p) });
 const boardTrain = new Board($('#board-train'), { onMove: (f, t, p) => onTrainMove(f, t, p) });
 const boardReview = new Board($('#board-review'), { onMove: () => {} });
@@ -147,6 +165,10 @@ async function startGame(opts) {
 async function botChoose() {
   const lv = LEVELS[G.level];
   const legal = G.chess.moves({ verbose: true });
+  if (lv.uci) {
+    const rr = await ana(G.chess.fen(), { elo: lv.num, movetime: 700 });
+    if (rr && rr.best && rr.best !== '(none)') return uciParts(rr.best);
+  }
   const r = await ana(G.chess.fen(), { depth: lv.depth, multipv: lv.multipv });
   if (!r || !r.lines.length) return legal[Math.floor(Math.random() * legal.length)];
   const lines = r.lines;
@@ -304,9 +326,15 @@ $('#btn-resign').onclick = () => {
 /* ---------- Neue-Partie-Dialog ---------- */
 const dlgNew = $('#dlg-new');
 function openNewDialog() {
-  const seg = $('#seg-level');
-  seg.innerHTML = LEVELS.map((l, i) => `<button data-v="${i}" class="${settings.level === i ? 'on' : ''}">${l.name}<small>etwa ${l.elo} Elo</small></button>`).join('');
-  seg.querySelectorAll('button').forEach((b) => b.onclick = () => { settings.level = +b.dataset.v; seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); });
+  const range = $('#elo-range');
+  range.value = levelInfo(settings.level).num;
+  const upd = () => {
+    const lv = levelInfo(+range.value);
+    settings.level = lv.num;
+    $('#elo-num').textContent = lv.num;
+    $('#elo-name').textContent = lv.name + (lv.num >= 2800 ? ' · zum Vergleich: Magnus Carlsen ca. 2823 (FIDE, Nov. 2026)' : '');
+  };
+  range.oninput = upd; upd();
   const sc = $('#seg-color');
   sc.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === settings.color); b.onclick = () => { settings.color = b.dataset.v; sc.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; });
   switchView('play');
@@ -566,12 +594,16 @@ $('#btn-train-hint').onclick = async () => {
 /* =====================================================================
    EINSTELLUNGEN
    ===================================================================== */
+initLookSettings($('#look-box'), settings, saveSettings, (k) => {
+  if (k === 'avatar') [coach, coachTrain, coachReview].forEach((c) => c.setAvatar(settings.avatar));
+  [board, boardTrain, boardReview].forEach((b) => b.render());
+});
 $('#set-key').value = settings.apiKey;
 $('#set-model').value = settings.model;
 $('#set-legal').checked = settings.showLegal;
 $('#set-retry').checked = settings.retryOffer;
 $('#set-key').onchange = (e) => { settings.apiKey = e.target.value.trim(); saveSettings(); };
-$('#set-model').onchange = (e) => { settings.model = e.target.value.trim() || 'gemini-3.8-flash'; saveSettings(); };
+$('#set-model').onchange = (e) => { settings.model = e.target.value.trim() || 'gemini-flash-latest'; saveSettings(); };
 $('#set-legal').onchange = (e) => { settings.showLegal = e.target.checked; saveSettings(); };
 $('#set-retry').onchange = (e) => { settings.retryOffer = e.target.checked; saveSettings(); };
 $('#set-test').onclick = async () => {
