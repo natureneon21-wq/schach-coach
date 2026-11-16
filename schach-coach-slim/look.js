@@ -31,6 +31,29 @@ export const LOOK_DEFAULTS = { board: 'gruen', pieceSet: 'geo', pieceColor: 'kla
 
 const find = (list, id) => list.find((x) => x.id === id) || list[0];
 
+// Platzhalter für das Video-Fenster mit Griff: am Griff ziehen = Bereich live auf die Videogröße anpassen.
+let saveFn = () => {};
+function mountPipGuide(s) {
+  if (document.getElementById('pip-guide')) return;
+  const g = document.createElement('div');
+  g.id = 'pip-guide';
+  g.innerHTML = '<span class="pip-label">Hier das Video-Fenster platzieren</span><div class="pip-grip" title="Ziehen, um den Bereich anzupassen"><i></i></div>';
+  document.body.appendChild(g);
+  const grip = g.querySelector('.pip-grip');
+  const setFromY = (y) => {
+    const h = window.innerHeight;
+    const pct = s.pipPos === 'top' ? (y / h) * 100 : ((h - y) / h) * 100;
+    s.pipH = Math.round(Math.max(12, Math.min(45, pct)));
+    document.documentElement.style.setProperty('--pip-h', `${s.pipH}dvh`);
+    document.dispatchEvent(new CustomEvent('pipchange'));
+  };
+  grip.addEventListener('pointerdown', (e) => { grip.setPointerCapture(e.pointerId); g.classList.add('drag'); e.preventDefault(); });
+  grip.addEventListener('pointermove', (e) => { if (g.classList.contains('drag')) setFromY(e.clientY); });
+  const end = () => { if (g.classList.contains('drag')) { g.classList.remove('drag'); saveFn(); } };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+}
+
 /** Setzt CSS-Variablen und Layout-Attribute. */
 export function applyLook(s) {
   const root = document.documentElement;
@@ -42,12 +65,19 @@ export function applyLook(s) {
   root.style.setProperty('--pb', c.b); root.style.setProperty('--pbo', c.bo);
   setPieceSet(s.pieceSet);
   root.style.setProperty('--pip-h', `${Math.max(12, Math.min(45, +s.pipH || 26))}dvh`);
+  mountPipGuide(s);
   document.body.dataset.layout = s.layout === 'pip' ? 'pip' : 'full';
   document.body.dataset.pipPos = s.pipPos === 'top' ? 'top' : 'bottom';
 }
 
 /** Baut den Bereich "Aussehen" in den Einstellungen. onChange(kind) wird nach jeder Änderung gerufen. */
 export function initLookSettings(box, s, save, onChange) {
+  saveFn = save;
+  document.addEventListener('pipchange', () => {
+    const r = box.querySelector('#pip-h'), v = box.querySelector('#pip-val');
+    if (r) r.value = s.pipH;
+    if (v) v.textContent = s.pipH;
+  });
   const render = () => {
     const sw = (t) => `<span class="sw"><i style="background:${t.light}"></i><i style="background:${t.dark}"></i></span>`;
     box.innerHTML = `
@@ -67,7 +97,7 @@ export function initLookSettings(box, s, save, onChange) {
         <div class="seg" data-k="pipPos"><button data-v="top" class="${s.pipPos === 'top' ? 'on' : ''}">Oben</button><button data-v="bottom" class="${s.pipPos !== 'top' ? 'on' : ''}">Unten</button></div>
         <label class="field">Platz für das Video: <b id="pip-val">${s.pipH}</b> % der Höhe
           <input type="range" id="pip-h" min="15" max="40" step="1" value="${s.pipH}"></label>
-        <p class="note">Starte das Video (YouTube, Netflix …) in seiner App, wechsle per Bild-im-Bild zurück und schiebe das kleine Fenster in den gestrichelten Bereich. Brett, dein Coach und die Tasten bleiben frei. Ob Bild-im-Bild klappt, hängt von der Video-App und deinem Konto ab.</p>
+        <p class="note">Starte das Video (YouTube, Netflix …) in seiner App, wechsle per Bild-im-Bild zurück und schiebe das kleine Fenster in den gestrichelten Bereich. Passt der Bereich nicht, zieh am Griff an seiner Innenkante, bis er zum Video passt. Brett, dein Coach und die Tasten bleiben frei. Ob Bild-im-Bild klappt, hängt von der Video-App und deinem Konto ab.</p>
       </div>
       <button class="btn small" id="fs-toggle">Browser-Vollbild an/aus</button>`;
     box.querySelectorAll('.grid-pick, .seg').forEach((g) => {
