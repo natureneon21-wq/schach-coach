@@ -16,6 +16,10 @@ export const BOARD_THEMES = [
   { id: 'nacht', name: 'Nacht', light: '#8d96b0', dark: '#3a4260' },
   { id: 'mint', name: 'Mint', light: '#e3f4ec', dark: '#5fb59a' },
   { id: 'kontrast', name: 'Hoher Kontrast', light: '#ffffff', dark: '#3d3d3d' },
+  { id: 'neon', name: 'Neon', light: '#262f5a', dark: '#0e1230' },
+  { id: 'biomech', name: 'Biomech', light: '#6b7479', dark: '#2a3236' },
+  { id: 'gruft', name: 'Gruft', light: '#5b4e52', dark: '#241a1f' },
+  { id: 'asche', name: 'Asche', light: '#8a8070', dark: '#3a3229' },
 ];
 
 // Farben für die SVG-Sets (der klassische Unicode-Satz bleibt Weiß/Schwarz)
@@ -25,6 +29,10 @@ export const PIECE_COLORS = [
   { id: 'blaurot', name: 'Blau / Rot', w: '#6fb1ff', wo: '#123a73', b: '#ef6a6a', bo: '#6d1717' },
   { id: 'minzviolett', name: 'Mint / Violett', w: '#8ff0cf', wo: '#0f5c47', b: '#8a63d2', bo: '#2c1457' },
   { id: 'elfenbein', name: 'Elfenbein / Ebenholz', w: '#f6ecd4', wo: '#5c4a2a', b: '#4a3524', bo: '#1c120a' },
+  { id: 'neon', name: 'Neon Cyan / Pink', w: '#2ff3ff', wo: '#0a6f78', b: '#ff3fd2', bo: '#7a0f63' },
+  { id: 'knochen', name: 'Knochen / Graphit', w: '#e4dfd0', wo: '#4d4a3f', b: '#5a686e', bo: '#0b0e10' },
+  { id: 'blut', name: 'Silber / Blutrot', w: '#d7d9e0', wo: '#3a3d4a', b: '#c2303b', bo: '#2a0508' },
+  { id: 'asche', name: 'Asche / Rost', w: '#d3cbb8', wo: '#3a3228', b: '#6b5442', bo: '#140d08' },
 ];
 
 export const LOOK_DEFAULTS = { board: 'gruen', pieceSet: 'geo', pieceColor: 'klassisch', avatar: 'mira', layout: 'full', pipPos: 'bottom', pipH: 26 };
@@ -106,6 +114,7 @@ export function initLookSettings(box, s, save, onChange) {
         if (!b) return;
         const k = g.dataset.k;
         s[k] = b.dataset.v;
+        if (k === 'pieceSet') { const ps = PIECE_SETS.find((x) => x.id === s[k]); if (ps && ps.color) { s.pieceColor = ps.color; s.board = ps.board; } }
         save(); applyLook(s); onChange(k); render();
       });
     });
