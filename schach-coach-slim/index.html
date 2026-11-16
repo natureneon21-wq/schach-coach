@@ -120,7 +120,6 @@
     </label>
     <button class="btn" id="set-test">Gemini testen</button>
     <div id="set-msg" class="note"></div>
-    <label class="check"><input type="checkbox" id="set-legal"> Mögliche Züge als Punkte anzeigen</label>
     <label class="check"><input type="checkbox" id="set-retry"> Bei Fehlern erst fragen und Zurücknehmen anbieten</label>
     <button class="btn" id="set-clear">Gespeicherte Partien und Aufgaben löschen</button>
     <p class="note"><b>Über diese App:</b> Der gesamte Code wurde mit KI (Claude von Anthropic) generiert („Vibe Coding“) und nicht von Hand geschrieben. Fehler sind möglich.</p>
@@ -138,14 +137,20 @@
 
 <dialog id="dlg-new">
   <h2>Neue Partie</h2>
+  <p class="lbl">Modus</p>
+  <div class="seg" id="seg-mode"><button data-v="bot">Gegen den Bot</button><button data-v="2p">2 Spieler</button></div>
+  <label class="check"><input type="checkbox" id="new-legal"> Mögliche Züge beim Antippen anzeigen</label>
+  <div id="new-bot-color">
   <p class="lbl">Deine Farbe</p>
   <div class="seg" id="seg-color">
     <button data-v="w">Weiß</button><button data-v="b">Schwarz</button><button data-v="r">Zufall</button>
+  </div>
   </div>
   <p class="lbl">Bedenkzeit</p>
   <div class="seg tcs" id="seg-tc"></div>
   <div class="tc-custom"><label>Minuten <input type="number" id="tc-m" min="0" max="180" inputmode="numeric"></label><label>+ Sekunden pro Zug <input type="number" id="tc-inc" min="0" max="60" inputmode="numeric"></label></div>
   <p class="note">0 Minuten = ohne Uhr. Wer keine Zeit mehr hat, verliert.</p>
+  <div id="new-bot-opp">
   <p class="lbl">Gegner</p>
   <div class="elo-box">
     <div class="elo-val"><b id="elo-num">400</b> Elo<small id="elo-name"></small></div>
@@ -153,6 +158,7 @@
     <div class="elo-marks"><span>200</span><span>1000</span><span>2000</span><span>3000</span></div>
     <p class="note" id="elo-mine"></p>
     <p class="note">Elo-Werte sind eine grobe Stockfish-Skala. Gegen Menschen fühlt sich dieselbe Zahl oft anders an.</p>
+  </div>
   </div>
   <div class="dlg-actions">
     <button class="btn" id="new-cancel">Abbrechen</button>
