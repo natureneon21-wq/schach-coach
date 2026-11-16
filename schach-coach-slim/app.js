@@ -100,13 +100,18 @@ async function ana(fen, opts) {
 }
 
 /* ---------- Navigation ---------- */
+let curView = 'play';
 function switchView(name) {
+  curView = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'review') { renderHistory(); renderRating(); }
   if (name === 'train') enterTrain();
 }
-document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
+document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.view !== curView) history.pushState({ v: b.dataset.view }, '');
+  switchView(b.dataset.view);
+}));
 initWissen(() => settings);
 
 /* ---------- Trainerin & Bretter ---------- */
@@ -743,15 +748,37 @@ $('#rv-crit').onclick = () => { const n = firstCritical(R.idx) ?? firstCritical(
 $('#rv-best').onclick = () => { if (!R || R.idx === 0) return; R.sub = R.sub === 0 ? 1 : 0; renderReview(); };
 function closeReview() { $('#review-main').hidden = true; $('#review-empty').hidden = false; renderHistory(); }
 $('#rv-back').onclick = () => { if (history.state && history.state.rv) history.back(); else closeReview(); };
-// Zurück-Taste des Handys: erst zur Partien-Liste bzw. zurück in die Analyse, nicht gleich die App schließen
-window.addEventListener('popstate', (e) => {
-  const st = e.state || {};
-  if (st.rv && R) {
-    switchView('review');
-    if (!R.pos.length) return;
-    $('#review-empty').hidden = true; $('#review-main').hidden = false; renderReview();
-  } else if (!$('#review-main').hidden && $('#view-review').classList.contains('active')) closeReview();
-});
+// Zurück-Taste des Handys wie bei anderen Apps: jeweils zum vorigen Bildschirm, am Ende "nochmal zurück" zum Schließen
+{
+  const st0 = history.state;
+  if (!st0 || st0.root) { history.replaceState({ root: 1 }, ''); history.pushState({ v: 'play', home: 1 }, ''); }
+  else history.replaceState({ v: 'play', home: 1 }, '');
+  let armed = 0, toastT = 0;
+  const toast = (t) => {
+    let el = document.getElementById('toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); }
+    el.textContent = t; el.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2000);
+  };
+  window.addEventListener('popstate', (e) => {
+    const st = e.state || {};
+    if (st.root || !e.state) {
+      if (Date.now() - armed < 2000) { history.back(); return; } // zweites Zurück: App schließen
+      armed = Date.now(); toast('Nochmal zurück zum Schließen');
+      history.pushState({ v: 'play', home: 1 }, ''); // Zurück bleibt auf dem Startbildschirm
+      if (curView !== 'play') switchView('play');
+      return;
+    }
+    if (st.rv && R && R.pos.length) {
+      switchView('review');
+      $('#review-empty').hidden = true; $('#review-main').hidden = false; renderReview();
+      return;
+    }
+    const v = st.v || 'play';
+    if (curView !== v) switchView(v);
+    if (v === 'review' && !$('#review-main').hidden) closeReview();
+  });
+}
 $('#rv-gem').onclick = async () => {
   if (!R || R.idx === 0) return;
   if (!settings.apiKey) { coachReview.say('Dafür brauche ich deinen Gemini-API-Key (Reiter „Mehr“).', 'think'); return; }
